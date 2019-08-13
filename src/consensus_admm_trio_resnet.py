@@ -20,10 +20,6 @@ Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
 Nadmm=3 # how many ADMM iterations
 
-# regularization
-lambda1=0.0001 # L1 sweet spot 0.00031
-lambda2=0.0001 # L2 sweet spot ?
-
 load_model=False
 init_model=True
 save_model=False
