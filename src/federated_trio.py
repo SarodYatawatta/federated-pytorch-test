@@ -211,6 +211,7 @@ Li=np.random.permutation(L).tolist()
 # Li.pop()
 print(Li)
 
+from lbfgsnew import LBFGSNew # custom optimizer
 import torch.optim as optim
 ############### loop 00 (over the full net)
 for nloop in range(Nloop):
@@ -227,12 +228,12 @@ for nloop in range(Nloop):
    z=torch.empty(N,dtype=torch.float,requires_grad=False)
    z.fill_(0.0)
   
-   opt1=optim.Adam(filter(lambda p: p.requires_grad, net1.parameters()),lr=0.001)
-   opt2=optim.Adam(filter(lambda p: p.requires_grad, net2.parameters()),lr=0.001)
-   opt3=optim.Adam(filter(lambda p: p.requires_grad, net3.parameters()),lr=0.001)
-   #opt1 =torch.optim.LBFGS(filter(lambda p: p.requires_grad, net1.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-   #opt2 =torch.optim.LBFGS(filter(lambda p: p.requires_grad, net2.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-   #opt3 =torch.optim.LBFGS(filter(lambda p: p.requires_grad, net3.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+   #opt1=optim.Adam(filter(lambda p: p.requires_grad, net1.parameters()),lr=0.001)
+   #opt2=optim.Adam(filter(lambda p: p.requires_grad, net2.parameters()),lr=0.001)
+   #opt3=optim.Adam(filter(lambda p: p.requires_grad, net3.parameters()),lr=0.001)
+   opt1 =LBFGSNew(filter(lambda p: p.requires_grad, net1.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+   opt2 =LBFGSNew(filter(lambda p: p.requires_grad, net2.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+   opt3 =LBFGSNew(filter(lambda p: p.requires_grad, net3.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
   
    ############# loop 1 (Federated avaraging for subset of model)
    for nadmm in range(Nadmm):
