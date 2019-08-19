@@ -49,7 +49,6 @@ classes=('plane', 'car', 'bird', 'cat',
 
 
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 # define a cnn
