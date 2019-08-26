@@ -373,7 +373,7 @@ for nloop in range(Nloop):
      x3=get_trainable_values(net3)
      znew=(x1+x2+x3)/3
      dual_residual=torch.norm(z-znew).item()/N # per parameter
-     print('dual (loop=%d,layer=%d,avg=%d)=%f'%(nloop,ci,nadmm,dual_residual))
+     print('dual (loop=%d,layer=%d,avg=%d)=%e'%(nloop,ci,nadmm,dual_residual))
      z=znew
      put_trainable_values(net1,z)
      put_trainable_values(net2,z)
