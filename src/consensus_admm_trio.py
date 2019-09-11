@@ -18,7 +18,7 @@ default_batch=512 # no. of batches (50000/3)/default_batch
 batches_for_epoch=33#(50000/3)/default_batch
 Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
-Nadmm=10 # how many ADMM iterations
+Nadmm=5 # how many ADMM iterations
 
 admm_rho0=0.001 # ADMM penalty, default value 
 # note that per each slave, and per each layer, there will be a unique rho value
@@ -35,7 +35,7 @@ bb_update=True # if true, use adaptive ADMM (Barzilai-Borwein) update
 
 if bb_update:
  #periodicity for the rho update, normally > 1
- bb_period_T=3
+ bb_period_T=2
  bb_alphacorrmin=0.2 # minimum correlation required before an update is done
  bb_epsilon=1e-3 # threshold to stop updating
 
@@ -381,6 +381,7 @@ for nloop in range(Nloop):
          d22=torch.dot(deltax1,deltax1)
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
+         rhonew=rho[ci,0]
          # catch situation where denominator is very small
          if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
            alpha=d12/math.sqrt(d11*d22)
@@ -394,8 +395,6 @@ for nloop in range(Nloop):
            if alpha>=bb_alphacorrmin: # catches d12 being negative
              rhonew=alphahat
            print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
-         else:
-           rhonew=rho[ci,0]
 
          rho[ci,0]=rhonew
          ###############
@@ -410,6 +409,7 @@ for nloop in range(Nloop):
          d22=torch.dot(deltax1,deltax1)
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
+         rhonew=rho[ci,1]
          # catch situation where denominator is very small
          if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
            alpha=d12/math.sqrt(d11*d22)
@@ -423,8 +423,6 @@ for nloop in range(Nloop):
            if alpha>=bb_alphacorrmin: # catches d12 being negative
              rhonew=alphahat
            print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
-         else:
-           rhonew=rho[ci,1]
 
          rho[ci,1]=rhonew
          ###############
@@ -439,6 +437,7 @@ for nloop in range(Nloop):
          d22=torch.dot(deltax1,deltax1)
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
+         rhonew=rho[ci,2]
          # catch situation where denominator is very small
          if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
            alpha=d12/math.sqrt(d11*d22)
@@ -452,8 +451,6 @@ for nloop in range(Nloop):
            if alpha>=bb_alphacorrmin: # catches d12 being negative
              rhonew=alphahat
            print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
-         else:
-           rhonew=rho[ci,2]
 
          rho[ci,2]=rhonew
          ###############
