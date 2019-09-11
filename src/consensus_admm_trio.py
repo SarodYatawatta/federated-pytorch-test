@@ -427,7 +427,7 @@ for nloop in range(Nloop):
          rho[ci,1]=rhonew
          ###############
 
-         yhat_2=y2+rho[ci,2]*(x3-z)
+         yhat_3=y3+rho[ci,2]*(x3-z)
          deltay1=yhat_3-yhat0_3
          deltax1=x3-x0_3
 
