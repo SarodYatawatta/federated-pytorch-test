@@ -20,6 +20,9 @@ Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
 Nadmm=3 # how many ADMM iterations
 
+admm_rho0=0.001 # ADMM penalty, default value 
+# note that per each slave, and per each layer, there will be a unique rho value
+
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
@@ -28,6 +31,12 @@ load_model=False
 init_model=True
 save_model=True
 check_results=True
+bb_update=True # if true, use adaptive ADMM (Barzilai-Borwein) update
+
+if bb_update:
+ #periodicity for the rho update
+ bb_period_T=2
+ bb_alphacorrmin=0.2 # minimum correlation required before an update is done
 
 transform=transforms.Compose(
    [transforms.ToTensor(),
@@ -215,6 +224,11 @@ Li=np.random.permutation(L).tolist()
 # Li.pop()
 print(Li)
 
+# regularization (per layer, per slave)
+# Note: need to scale rho down when starting from scratch  
+rho=torch.ones(L,3)*admm_rho0
+# this will be updated when using adaptive ADMM
+
 from lbfgsnew import LBFGSNew # custom optimizer
 import torch.optim as optim
 ############### loop 00 (over the full net)
@@ -238,6 +252,21 @@ for nloop in range(Nloop):
    y3.fill_(0.0)
    z=torch.empty(N,dtype=torch.float,requires_grad=False)
    z.fill_(0.0)
+   if bb_update: # extra storage for adaptive ADMM
+     yhat_1=torch.empty(N,dtype=torch.float,requires_grad=False)
+     yhat_2=torch.empty(N,dtype=torch.float,requires_grad=False)
+     yhat_3=torch.empty(N,dtype=torch.float,requires_grad=False)
+     x0_1=torch.empty(N,dtype=torch.float,requires_grad=False)
+     x0_2=torch.empty(N,dtype=torch.float,requires_grad=False)
+     x0_3=torch.empty(N,dtype=torch.float,requires_grad=False)
+     # initialize yhat0 for all slaves
+     yhat_1.fill_(0.0)
+     yhat_2.fill_(0.0)
+     yhat_3.fill_(0.0)
+     yhat0_1=get_trainable_values(net1)
+     yhat0_2=get_trainable_values(net2)
+     yhat0_3=get_trainable_values(net3)
+     
   
    #opt1=optim.Adam(filter(lambda p: p.requires_grad, net1.parameters()),lr=0.001)
    #opt2=optim.Adam(filter(lambda p: p.requires_grad, net2.parameters()),lr=0.001)
@@ -246,8 +275,6 @@ for nloop in range(Nloop):
    opt2 =LBFGSNew(filter(lambda p: p.requires_grad, net2.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
    opt3 =LBFGSNew(filter(lambda p: p.requires_grad, net3.parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
   
-   # need to scale rho down when starting from scratch  
-   rho=0.001
    ############# loop 1 (ADMM for subset of model)
    for nadmm in range(Nadmm):
      ##### loop 2 (data)
@@ -279,7 +306,7 @@ for nloop in range(Nloop):
                     opt1.zero_grad()
                  outputs=net1(inputs1)
                  # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y1,params_vec1))+0.5*rho*(torch.norm(params_vec1-z,2)**2)
+                 augmented_terms=(torch.dot(y1,params_vec1))+0.5*rho[ci,0]*(torch.norm(params_vec1-z,2)**2)
                  loss=criterion1(outputs,labels1)+augmented_terms
                  if ci==2 or ci==3:
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
@@ -291,7 +318,7 @@ for nloop in range(Nloop):
                     opt2.zero_grad()
                  outputs=net2(inputs2)
                  # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y2,params_vec2))+0.5*rho*(torch.norm(params_vec2-z,2)**2)
+                 augmented_terms=(torch.dot(y2,params_vec2))+0.5*rho[ci,1]*(torch.norm(params_vec2-z,2)**2)
                  loss=criterion2(outputs,labels2)+augmented_terms
                  if ci==2 or ci==3:
                     loss+=lambda1*torch.norm(params_vec2,1)+lambda2*(torch.norm(params_vec2,2)**2)
@@ -303,7 +330,7 @@ for nloop in range(Nloop):
                     opt3.zero_grad()
                  outputs=net3(inputs3)
                  # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y3,params_vec3))+0.5*rho*(torch.norm(params_vec3-z,2)**2)
+                 augmented_terms=(torch.dot(y3,params_vec3))+0.5*rho[ci,2]*(torch.norm(params_vec3-z,2)**2)
                  loss=criterion3(outputs,labels3)+augmented_terms
                  if ci==2 or ci==3:
                     loss+=lambda1*torch.norm(params_vec3,1)+lambda2*(torch.norm(params_vec3,2)**2)
@@ -328,32 +355,129 @@ for nloop in range(Nloop):
            running_loss3 +=loss3
   
            
-           print('layer=%d %d(%d,%f) minibatch=%d epoch=%d losses %e,%e,%e'%(ci,nloop,N,rho,i,epoch,loss1,loss2,loss3))
+           print('layer=%d %d(%d,%f) minibatch=%d epoch=%d losses %e,%e,%e'%(ci,nloop,N,torch.mean(rho).item(),i,epoch,loss1,loss2,loss3))
   
      # ADMM step 2 update global z
      x1=get_trainable_values(net1)
      x2=get_trainable_values(net2)
      x3=get_trainable_values(net3)
-     # <- each slave will send (y+rho*x) to master
-     znew=(y1+rho*x1 +y2+rho*x2 +y3+rho*x3)/(3*rho)
-     # elastic net regularization penalty alpha ||z||^2 + beta ||z||_1
-     #alpha=0.0000001
-     #beta=0.0000001
-     #znew=sthreshold(znew,2*beta/((3)*rho+2*alpha))
-     dual_residual=torch.norm(z-znew).item()/N
   
+     # decide and update rho for this ADMM iteration (not the first iteration)
+     if bb_update:
+       if nadmm==0:
+         # store for next use
+         x0_1=x1
+         x0_2=x2
+         x0_3=x3
+       elif (nadmm%bb_period_T)==0:
+         yhat_1=y1+rho[ci,0]*(x1-z)
+         deltay1=yhat_1-yhat0_1
+         deltax1=x1-x0_1
+
+         # inner products
+         d11=torch.dot(deltay1,deltay1)
+         d12=torch.dot(deltay1,deltax1) # note: can be negative
+         d22=torch.dot(deltax1,deltax1)
+    
+         print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
+         alpha=d12/math.sqrt(d11*d22)
+         alphaSD=d11/d12
+         alphaMG=d12/d22 
+
+         if 2.0*alphaMG>alphaSD:
+           alphahat=alphaMG
+         else:
+           alphahat=alphaSD-0.5*alphaMG
+         if alpha>=bb_alphacorrmin: # catches d12 being negative
+           rhonew=alphahat
+         else:
+           rhonew=rho[ci,0]
+
+         print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
+         rho[ci,0]=rhonew
+         ###############
+
+         yhat_2=y2+rho[ci,1]*(x2-z)
+         deltay1=yhat_2-yhat0_2
+         deltax1=x2-x0_2
+
+         # inner products
+         d11=torch.dot(deltay1,deltay1)
+         d12=torch.dot(deltay1,deltax1) # note: can be negative
+         d22=torch.dot(deltax1,deltax1)
+    
+         print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
+         alpha=d12/math.sqrt(d11*d22)
+         alphaSD=d11/d12
+         alphaMG=d12/d22 
+
+         if 2.0*alphaMG>alphaSD:
+           alphahat=alphaMG
+         else:
+           alphahat=alphaSD-0.5*alphaMG
+         if alpha>=bb_alphacorrmin: # catches d12 being negative
+           rhonew=alphahat
+         else:
+           rhonew=rho[ci,1]
+
+         print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
+         rho[ci,1]=rhonew
+         ###############
+
+         yhat_2=y2+rho[ci,2]*(x3-z)
+         deltay1=yhat_3-yhat0_3
+         deltax1=x3-x0_3
+
+         # inner products
+         d11=torch.dot(deltay1,deltay1)
+         d12=torch.dot(deltay1,deltax1) # note: can be negative
+         d22=torch.dot(deltax1,deltax1)
+    
+         print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
+         alpha=d12/math.sqrt(d11*d22)
+         alphaSD=d11/d12
+         alphaMG=d12/d22 
+
+         if 2.0*alphaMG>alphaSD:
+           alphahat=alphaMG
+         else:
+           alphahat=alphaSD-0.5*alphaMG
+         if alpha>=bb_alphacorrmin: # catches d12 being negative
+           rhonew=alphahat
+         else:
+           rhonew=rho[ci,2]
+
+         print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
+         rho[ci,2]=rhonew
+         ###############
+
+         print(rho)
+         # carry forward current values for the next update
+         yhat0_1=yhat_1
+         x0_1=x1
+         yhat0_2=yhat_2
+         x0_2=x2
+         yhat0_3=yhat_3
+         x0_3=x3
+
+ 
+     # <- each slave will send (y+rho*x)/rho to master
+     znew=(y1+rho[ci,0]*x1)/rho[ci,0] +(y2+rho[ci,1]*x2)/rho[ci,1] +(y3+rho[ci,2]*x3)/rho[ci,2]
+     dual_residual=torch.norm(z-znew).item()/N
+
      # decide if to stop ADMM if dual residual is too low 
      #if dual_residual<1e-9:
      #  break
      z=znew
      # -> master will send z to all slaves
      # ADMM step 3 update Lagrange multiplier 
-     y1.add_(rho*(x1-z)) 
-     y2.add_(rho*(x2-z)) 
-     y3.add_(rho*(x3-z)) 
+     y1.add_(rho[ci,0]*(x1-z)) 
+     y2.add_(rho[ci,1]*(x2-z)) 
+     y3.add_(rho[ci,2]*(x3-z)) 
      primal_residual=(torch.norm(x1-z).item()+torch.norm(x2-z).item()+torch.norm(x3-z).item())/(3*N)
   
-     print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,rho,nadmm,primal_residual,dual_residual))
+     
+     print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,primal_residual,dual_residual))
   
      
 
