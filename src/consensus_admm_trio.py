@@ -35,8 +35,9 @@ bb_update=True # if true, use adaptive ADMM (Barzilai-Borwein) update
 
 if bb_update:
  #periodicity for the rho update
- bb_period_T=2
+ bb_period_T=1
  bb_alphacorrmin=0.2 # minimum correlation required before an update is done
+ bb_epsilon=1e-3 # threshold to stop updating
 
 transform=transforms.Compose(
    [transforms.ToTensor(),
@@ -380,20 +381,22 @@ for nloop in range(Nloop):
          d22=torch.dot(deltax1,deltax1)
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
-         alpha=d12/math.sqrt(d11*d22)
-         alphaSD=d11/d12
-         alphaMG=d12/d22 
+         # catch situation where denominator is very small
+         if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
+           alpha=d12/math.sqrt(d11*d22)
+           alphaSD=d11/d12
+           alphaMG=d12/d22 
 
-         if 2.0*alphaMG>alphaSD:
-           alphahat=alphaMG
-         else:
-           alphahat=alphaSD-0.5*alphaMG
-         if alpha>=bb_alphacorrmin: # catches d12 being negative
-           rhonew=alphahat
+           if 2.0*alphaMG>alphaSD:
+             alphahat=alphaMG
+           else:
+             alphahat=alphaSD-0.5*alphaMG
+           if alpha>=bb_alphacorrmin: # catches d12 being negative
+             rhonew=alphahat
+           print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
          else:
            rhonew=rho[ci,0]
 
-         print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
          rho[ci,0]=rhonew
          ###############
 
@@ -407,20 +410,22 @@ for nloop in range(Nloop):
          d22=torch.dot(deltax1,deltax1)
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
-         alpha=d12/math.sqrt(d11*d22)
-         alphaSD=d11/d12
-         alphaMG=d12/d22 
+         # catch situation where denominator is very small
+         if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
+           alpha=d12/math.sqrt(d11*d22)
+           alphaSD=d11/d12
+           alphaMG=d12/d22 
 
-         if 2.0*alphaMG>alphaSD:
-           alphahat=alphaMG
-         else:
-           alphahat=alphaSD-0.5*alphaMG
-         if alpha>=bb_alphacorrmin: # catches d12 being negative
-           rhonew=alphahat
+           if 2.0*alphaMG>alphaSD:
+             alphahat=alphaMG
+           else:
+             alphahat=alphaSD-0.5*alphaMG
+           if alpha>=bb_alphacorrmin: # catches d12 being negative
+             rhonew=alphahat
+           print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
          else:
            rhonew=rho[ci,1]
 
-         print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
          rho[ci,1]=rhonew
          ###############
 
@@ -434,20 +439,22 @@ for nloop in range(Nloop):
          d22=torch.dot(deltax1,deltax1)
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
-         alpha=d12/math.sqrt(d11*d22)
-         alphaSD=d11/d12
-         alphaMG=d12/d22 
+         # catch situation where denominator is very small
+         if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
+           alpha=d12/math.sqrt(d11*d22)
+           alphaSD=d11/d12
+           alphaMG=d12/d22 
 
-         if 2.0*alphaMG>alphaSD:
-           alphahat=alphaMG
-         else:
-           alphahat=alphaSD-0.5*alphaMG
-         if alpha>=bb_alphacorrmin: # catches d12 being negative
-           rhonew=alphahat
+           if 2.0*alphaMG>alphaSD:
+             alphahat=alphaMG
+           else:
+             alphahat=alphaSD-0.5*alphaMG
+           if alpha>=bb_alphacorrmin: # catches d12 being negative
+             rhonew=alphahat
+           print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
          else:
            rhonew=rho[ci,2]
 
-         print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
          rho[ci,2]=rhonew
          ###############
 
