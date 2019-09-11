@@ -18,7 +18,7 @@ default_batch=512 # no. of batches (50000/3)/default_batch
 batches_for_epoch=33#(50000/3)/default_batch
 Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
-Nadmm=3 # how many ADMM iterations
+Nadmm=10 # how many ADMM iterations
 
 admm_rho0=0.001 # ADMM penalty, default value 
 # note that per each slave, and per each layer, there will be a unique rho value
@@ -34,8 +34,8 @@ check_results=True
 bb_update=True # if true, use adaptive ADMM (Barzilai-Borwein) update
 
 if bb_update:
- #periodicity for the rho update
- bb_period_T=1
+ #periodicity for the rho update, normally > 1
+ bb_period_T=3
  bb_alphacorrmin=0.2 # minimum correlation required before an update is done
  bb_epsilon=1e-3 # threshold to stop updating
 
