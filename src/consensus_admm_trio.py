@@ -467,7 +467,7 @@ for nloop in range(Nloop):
 
  
      # <- each slave will send (y+rho*x)/rho to master
-     znew=(y1+rho[ci,0]*x1)/rho[ci,0] +(y2+rho[ci,1]*x2)/rho[ci,1] +(y3+rho[ci,2]*x3)/rho[ci,2]
+     znew=((y1+rho[ci,0]*x1) +(y2+rho[ci,1]*x2) +(y3+rho[ci,2]*x3))/(rho[ci,0]+rho[ci,1]+rho[ci,2])
      dual_residual=torch.norm(z-znew).item()/N
 
      # decide if to stop ADMM if dual residual is too low 
