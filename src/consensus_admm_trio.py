@@ -38,6 +38,7 @@ if bb_update:
  bb_period_T=2
  bb_alphacorrmin=0.2 # minimum correlation required before an update is done
  bb_epsilon=1e-3 # threshold to stop updating
+ bb_rhomax=0.1 # keep regularization below a safe upper limit
 
 transform=transforms.Compose(
    [transforms.ToTensor(),
@@ -392,7 +393,7 @@ for nloop in range(Nloop):
              alphahat=alphaMG
            else:
              alphahat=alphaSD-0.5*alphaMG
-           if alpha>=bb_alphacorrmin: # catches d12 being negative
+           if alpha>=bb_alphacorrmin and alphahat<bb_rhomax: # catches d12 being negative
              rhonew=alphahat
            print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
 
@@ -420,7 +421,7 @@ for nloop in range(Nloop):
              alphahat=alphaMG
            else:
              alphahat=alphaSD-0.5*alphaMG
-           if alpha>=bb_alphacorrmin: # catches d12 being negative
+           if alpha>=bb_alphacorrmin and alphahat<bb_rhomax: # catches d12 being negative
              rhonew=alphahat
            print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
 
@@ -448,7 +449,7 @@ for nloop in range(Nloop):
              alphahat=alphaMG
            else:
              alphahat=alphaSD-0.5*alphaMG
-           if alpha>=bb_alphacorrmin: # catches d12 being negative
+           if alpha>=bb_alphacorrmin and alphahat<bb_rhomax: # catches d12 being negative
              rhonew=alphahat
            print('admm %d alphas=(%e,%e,%e)\n'%(nadmm,alpha,alphaSD,alphaMG))
 
