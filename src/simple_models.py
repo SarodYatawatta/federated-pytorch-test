@@ -121,7 +121,7 @@ class Net2(nn.Module):
 
   # return linear layer parameters (for regularization)
   def linear_layer_parameters(self):
-    linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters() or self.fc3.parameters() or self.fc3.parameters())])
+    linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters() or self.fc3.parameters() or self.fc4.parameters() or self.fc5.parameters())])
     return linear1
 
 
