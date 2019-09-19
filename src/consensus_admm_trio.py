@@ -70,31 +70,7 @@ classes=('plane', 'car', 'bird', 'cat',
 import numpy as np
 
 # define a cnn
-from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
-
-
-# test relu or elu
-
-class Net(nn.Module):
-  def __init__(self):
-    super(Net,self).__init__()
-    self.conv1=nn.Conv2d(3,6,5) # increase width 6->?
-    self.pool=nn.MaxPool2d(2,2)
-    self.conv2=nn.Conv2d(6,16,5) # increase width 6->?
-    self.fc1=nn.Linear(16*5*5,120)
-    self.fc2=nn.Linear(120,84)
-    self.fc3=nn.Linear(84,10)
-  
-  def forward(self,x):
-    x=self.pool(F.elu(self.conv1(x)))
-    x=self.pool(F.elu(self.conv2(x)))
-    x=x.view(-1,16*5*5)
-    x=F.elu(self.fc1(x))
-    x=F.elu(self.fc2(x))
-    x=self.fc3(x)
-    return x
+from simple_models import *
 
 net1=Net()
 net2=Net()
@@ -114,7 +90,7 @@ if load_model:
 
 ########################################################################### helper functions
 def init_weights(m):
-  if type(m)==nn.Linear:
+  if type(m)==nn.Linear or type(m)==nn.Conv2d:
     torch.nn.init.xavier_uniform_(m.weight)
     m.bias.data.fill_(0.01)
 
@@ -215,16 +191,12 @@ criterion3=nn.CrossEntropyLoss()
 L=number_of_layers(net1)
 # create layer ids in random order 0..L-1 for selective training
 np.random.seed(0)# get same list
-Li=np.random.permutation(L).tolist()
-# prioritize by current difference in weights
-#D=distance_of_layers(net1,net2,net3)
-#print(D)
-#Li=np.argsort(D)
-#Li=Li.tolist()
-# remove layer numbers with lowest dist
-#for ci in range(4):
-# Li.pop()
-print(Li)
+Li=net1.train_order_layer_ids()
+# make sure number of layers match
+if L != len(Li):
+  print("Warning, expected number of layers and given layer ids do not agree")
+else:
+  print(Li)
 
 # regularization (per layer, per slave)
 # Note: need to scale rho down when starting from scratch  
@@ -310,7 +282,7 @@ for nloop in range(Nloop):
                  # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
                  augmented_terms=(torch.dot(y1,params_vec1))+0.5*rho[ci,0]*(torch.norm(params_vec1-z,2)**2)
                  loss=criterion1(outputs,labels1)+augmented_terms
-                 if ci==2 or ci==3:
+                 if ci in net1.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
                  if loss.requires_grad:
                     loss.backward()
@@ -322,7 +294,7 @@ for nloop in range(Nloop):
                  # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
                  augmented_terms=(torch.dot(y2,params_vec2))+0.5*rho[ci,1]*(torch.norm(params_vec2-z,2)**2)
                  loss=criterion2(outputs,labels2)+augmented_terms
-                 if ci==2 or ci==3:
+                 if ci in net2.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec2,1)+lambda2*(torch.norm(params_vec2,2)**2)
                  if loss.requires_grad:
                     loss.backward()
@@ -334,7 +306,7 @@ for nloop in range(Nloop):
                  # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
                  augmented_terms=(torch.dot(y3,params_vec3))+0.5*rho[ci,2]*(torch.norm(params_vec3-z,2)**2)
                  loss=criterion3(outputs,labels3)+augmented_terms
-                 if ci==2 or ci==3:
+                 if ci in net3.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec3,1)+lambda2*(torch.norm(params_vec3,2)**2)
                  if loss.requires_grad:
                     loss.backward()
