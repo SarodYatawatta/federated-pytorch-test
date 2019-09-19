@@ -7,6 +7,8 @@ Files included are:
 
 ``` lbfgsnew.py ```: New LBFGS optimizer
 
+``` simple_models.py ```: Relatively simple CNN models for CIFAR10, derived from PyTorch/Tensorflow demos
+
 ``` no_consensus_trio.py ```: Train 3 models using 1/3 of the training data for each model
 
 ``` federated_trio.py ```: Train 3 models using 1/3 of the data, but with federated averaging
@@ -16,3 +18,4 @@ Files included are:
 ``` federated_trio_resnet.py ```: Train 3 ResNet18 models using 1/3 of the data, but with federated averaging
 
 ``` consensus_admm_trio_resnet.py ```: Train 3 ResNet18 models using 1/3 of the data, but with consensus optimization
+
