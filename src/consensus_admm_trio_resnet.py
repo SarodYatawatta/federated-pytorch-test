@@ -180,7 +180,7 @@ upidx=[2,8,14,23,29,38,44,53,59,61]
 
 ########################################################################### helper functions
 def init_weights(m):
-  if type(m)==nn.Linear:
+  if type(m)==nn.Linear or type(m)==nn.Conv2d:
     torch.nn.init.xavier_uniform_(m.weight)
     if hasattr(m, 'bias'):
       if m.bias is not None:
