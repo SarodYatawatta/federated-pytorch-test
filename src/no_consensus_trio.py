@@ -8,7 +8,7 @@ import time
 # train three models, find average of weights and see what you get
 
 torch.manual_seed(69)
-default_batch=512 # no. of batches 50000/default_batch
+default_batch=32 # no. of batches 50000/default_batch
 batches_for_epoch=200#50000/default_batch
 
 # regularization
