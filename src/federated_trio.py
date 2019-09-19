@@ -60,35 +60,11 @@ classes=('plane', 'car', 'bird', 'cat',
 import numpy as np
 
 # define a cnn
-from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
+from simple_models import *
 
-
-# test relu or elu
-
-class Net(nn.Module):
-  def __init__(self):
-    super(Net,self).__init__()
-    self.conv1=nn.Conv2d(3,6,5) # increase width 6->?
-    self.pool=nn.MaxPool2d(2,2)
-    self.conv2=nn.Conv2d(6,16,5) # increase width 6->?
-    self.fc1=nn.Linear(16*5*5,120)
-    self.fc2=nn.Linear(120,84)
-    self.fc3=nn.Linear(84,10)
-  
-  def forward(self,x):
-    x=self.pool(F.elu(self.conv1(x)))
-    x=self.pool(F.elu(self.conv2(x)))
-    x=x.view(-1,16*5*5)
-    x=F.elu(self.fc1(x))
-    x=F.elu(self.fc2(x))
-    x=self.fc3(x)
-    return x
-
-net1=Net()
-net2=Net()
-net3=Net()
+net1=Net2()
+net2=Net2()
+net3=Net2()
 
 # update from saved models
 if load_model:
@@ -203,13 +179,14 @@ criterion2=nn.CrossEntropyLoss()
 criterion3=nn.CrossEntropyLoss()
 
 L=number_of_layers(net1)
-# create layer ids in random order 0..L-1 for selective training
+# get layer ids in given order 0..L-1 for selective training
 np.random.seed(0)# get same list
-Li=np.random.permutation(L).tolist()
-# remove layer numbers with lowest dist
-#for ci in range(4):
-# Li.pop()
-print(Li)
+Li=net1.train_order_layer_ids()
+# make sure number of layers match
+if L != len(Li):
+  print("Warning, expected number of layers and given layer ids do not agree")
+else:
+  print(Li)
 
 from lbfgsnew import LBFGSNew # custom optimizer
 import torch.optim as optim
@@ -267,7 +244,7 @@ for nloop in range(Nloop):
                     opt1.zero_grad()
                  outputs=net1(inputs1)
                  loss=criterion1(outputs,labels1)
-                 if ci==2 or ci==3:
+                 if ci in net1.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
                  if loss.requires_grad:
                     loss.backward()
@@ -277,7 +254,7 @@ for nloop in range(Nloop):
                     opt2.zero_grad()
                  outputs=net2(inputs2)
                  loss=criterion2(outputs,labels2)
-                 if ci==2 or ci==3:
+                 if ci in net2.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec2,1)+lambda2*(torch.norm(params_vec2,2)**2)
                  if loss.requires_grad:
                     loss.backward()
@@ -287,7 +264,7 @@ for nloop in range(Nloop):
                     opt3.zero_grad()
                  outputs=net3(inputs3)
                  loss=criterion3(outputs,labels3)
-                 if ci==2 or ci==3:
+                 if ci in net3.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec3,1)+lambda2*(torch.norm(params_vec3,2)**2)
                  if loss.requires_grad:
                     loss.backward()
