@@ -1,4 +1,5 @@
 from torch.autograd import Variable
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -27,11 +28,17 @@ class Net(nn.Module):
   # return linear layer ids (in 0...4)
   def linear_layer_ids(self):
     return [2,3,4]
+  
+  # return linear layer parameters (for regularization)
+  def linear_layer_parameters(self):
+    linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters() or self.fc3.parameters())])
+    return linear1
 
   # return layer ids (in 0...4) ordered for training
   def train_order_layer_ids(self):
     return [2,0,1,3,4]
 
+  
 
 
 class Net1(nn.Module):
@@ -61,6 +68,11 @@ class Net1(nn.Module):
   # return linear layer ids (in 0...5)
   def linear_layer_ids(self):
     return [4,5]
+
+  # return linear layer parameters (for regularization)
+  def linear_layer_parameters(self):
+    linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters())])
+    return linear1
 
   # return layer ids (in 0...5) ordered for training
   def train_order_layer_ids(self):
@@ -106,6 +118,13 @@ class Net2(nn.Module):
   # return linear layer ids (in 0...8)
   def linear_layer_ids(self):
     return [4,5,6,7,8]
+
+  # return linear layer parameters (for regularization)
+  def linear_layer_parameters(self):
+    linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters() or self.fc3.parameters() or self.fc3.parameters())])
+    return linear1
+
+
 
   # return layer ids (in 0...8) ordered for training
   def train_order_layer_ids(self):

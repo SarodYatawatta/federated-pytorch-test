@@ -53,9 +53,9 @@ import numpy as np
 
 # define a cnn
 from simple_models import *
-net1=Net()
-net2=Net()
-net3=Net()
+net1=Net1()
+net2=Net1()
+net3=Net1()
 
 
 def init_weights(m):
@@ -107,12 +107,12 @@ import torch.optim as optim
 criterion1=nn.CrossEntropyLoss()
 criterion2=nn.CrossEntropyLoss()
 criterion3=nn.CrossEntropyLoss()
-#optimizer1=optim.Adam(net1.parameters(), lr=0.001)
-#optimizer2=optim.Adam(net2.parameters(), lr=0.001)
-#optimizer3=optim.Adam(net3.parameters(), lr=0.001)
-optimizer1 = LBFGSNew(net1.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-optimizer2 = LBFGSNew(net2.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-optimizer3 = LBFGSNew(net3.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+optimizer1=optim.Adam(net1.parameters(), lr=0.001)
+optimizer2=optim.Adam(net2.parameters(), lr=0.001)
+optimizer3=optim.Adam(net3.parameters(), lr=0.001)
+#optimizer1 = LBFGSNew(net1.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+#optimizer2 = LBFGSNew(net2.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+#optimizer3 = LBFGSNew(net3.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
 
 start_time=time.time()
 # train network LBFGS 12, other 60
@@ -127,16 +127,15 @@ for epoch in range(12):
     inputs1,labels1=Variable(inputs1),Variable(labels1)
 
     # parameters in linear layers
-    linear1=torch.cat([x.view(-1) for x in net1.fc1.parameters()])
-    linear2=torch.cat([x.view(-1) for x in net1.fc2.parameters()])
+    linear1=net1.linear_layer_parameters()
 
     def closure1():
         if torch.is_grad_enabled():
          optimizer1.zero_grad()
         outputs1=net1(inputs1)
         # regularization terms || ||_1 + || ||_2^2
-        l1_penalty=lambda1*(torch.norm(linear1,1)+torch.norm(linear2,1))
-        l2_penalty=lambda2*(torch.norm(linear1,2)**2+torch.norm(linear2,2)**2)
+        l1_penalty=lambda1*(torch.norm(linear1,1))
+        l2_penalty=lambda2*(torch.norm(linear1,2)**2)
         loss=criterion1(outputs1,labels1)+l1_penalty+l2_penalty
         #print('1: loss %f'%(loss))
         if loss.requires_grad:
@@ -156,16 +155,15 @@ for epoch in range(12):
     inputs2,labels2=Variable(inputs2),Variable(labels2)
 
     # parameters in linear layers
-    linear1=torch.cat([x.view(-1) for x in net2.fc1.parameters()])
-    linear2=torch.cat([x.view(-1) for x in net2.fc2.parameters()])
+    linear1=net2.linear_layer_parameters()
 
     def closure2():
         if torch.is_grad_enabled():
          optimizer2.zero_grad()
         outputs2=net2(inputs2)
         # regularization terms || ||_1 + || ||_2^2
-        l1_penalty=lambda1*(torch.norm(linear1,1)+torch.norm(linear2,1))
-        l2_penalty=lambda2*(torch.norm(linear1,2)**2+torch.norm(linear2,2)**2)
+        l1_penalty=lambda1*(torch.norm(linear1,1))
+        l2_penalty=lambda2*(torch.norm(linear1,2)**2)
         loss=criterion2(outputs2,labels2)+l1_penalty+l2_penalty
         #print('2: loss %f'%(loss))
         if loss.requires_grad:
@@ -185,16 +183,15 @@ for epoch in range(12):
     inputs3,labels3=Variable(inputs3),Variable(labels3)
 
     # parameters in linear layers
-    linear1=torch.cat([x.view(-1) for x in net3.fc1.parameters()])
-    linear2=torch.cat([x.view(-1) for x in net3.fc2.parameters()])
+    linear1=net3.linear_layer_parameters()
 
     def closure3():
         if torch.is_grad_enabled():
          optimizer3.zero_grad()
         outputs3=net3(inputs3)
         # regularization terms || ||_1 + || ||_2^2
-        l1_penalty=lambda1*(torch.norm(linear1,1)+torch.norm(linear2,1))
-        l2_penalty=lambda2*(torch.norm(linear1,2)**2+torch.norm(linear2,2)**2)
+        l1_penalty=lambda1*(torch.norm(linear1,1))
+        l2_penalty=lambda2*(torch.norm(linear1,2)**2)
         loss=criterion3(outputs3,labels3)+l1_penalty+l2_penalty
         #print('3: loss %f'%(loss))
         if loss.requires_grad:
