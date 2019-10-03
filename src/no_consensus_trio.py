@@ -107,12 +107,12 @@ import torch.optim as optim
 criterion1=nn.CrossEntropyLoss()
 criterion2=nn.CrossEntropyLoss()
 criterion3=nn.CrossEntropyLoss()
-optimizer1=optim.Adam(net1.parameters(), lr=0.001)
-optimizer2=optim.Adam(net2.parameters(), lr=0.001)
-optimizer3=optim.Adam(net3.parameters(), lr=0.001)
-#optimizer1 = LBFGSNew(net1.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-#optimizer2 = LBFGSNew(net2.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-#optimizer3 = LBFGSNew(net3.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+#optimizer1=optim.Adam(net1.parameters(), lr=0.001)
+#optimizer2=optim.Adam(net2.parameters(), lr=0.001)
+#optimizer3=optim.Adam(net3.parameters(), lr=0.001)
+optimizer1 = LBFGSNew(net1.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+optimizer2 = LBFGSNew(net2.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+optimizer3 = LBFGSNew(net3.parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
 
 start_time=time.time()
 # train network LBFGS 12, other 60

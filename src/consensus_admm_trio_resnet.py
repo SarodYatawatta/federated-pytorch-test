@@ -252,6 +252,30 @@ def sthreshold(z,sval):
     z=T(z)
   return z
 
+
+def verification_error_check(net1,net2,net3):
+  correct1=0
+  correct2=0
+  correct3=0
+  total=0
+
+  for data in testloader:
+    images,labels=data
+    outputs=net1(Variable(images))
+    _,predicted=torch.max(outputs.data,1)
+    correct1 += (predicted==labels).sum()
+    outputs=net2(Variable(images))
+    _,predicted=torch.max(outputs.data,1)
+    correct2 += (predicted==labels).sum()
+    outputs=net3(Variable(images))
+    _,predicted=torch.max(outputs.data,1)
+    correct3 += (predicted==labels).sum()
+    total += labels.size(0)
+
+  print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
+     (total,100*correct1/total,100*correct2/total,100*correct3/total))
+
+
 ##############################################################################################
 
 if init_model:
@@ -408,34 +432,11 @@ for nloop in range(Nloop):
   
      print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,rho,nadmm,primal_residual,dual_residual))
   
-     
+     if check_results:
+       verification_error_check(net1,net2,net3)
 
 
 print('Finished Training')
-
-
-if check_results:
-  correct1=0
-  correct2=0
-  correct3=0
-  total=0
-
-  for data in testloader:
-    images,labels=data
-    outputs=net1(Variable(images))
-    _,predicted=torch.max(outputs.data,1)
-    correct1 += (predicted==labels).sum()
-    outputs=net2(Variable(images))
-    _,predicted=torch.max(outputs.data,1)
-    correct2 += (predicted==labels).sum()
-    outputs=net3(Variable(images))
-    _,predicted=torch.max(outputs.data,1)
-    correct3 += (predicted==labels).sum()
-    total += labels.size(0)
-   
-  print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
-     (total,100*correct1/total,100*correct2/total,100*correct3/total))
-
 
 
 if save_model:
