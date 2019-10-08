@@ -361,8 +361,8 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt1.zero_grad()
                  outputs=net1(inputs1)
-                 # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y1,params_vec1))+0.5*rho*(torch.norm(params_vec1-z,2)**2)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y1,params_vec1-z))+0.5*rho*(torch.norm(params_vec1-z,2)**2)
                  loss=criterion1(outputs,labels1)+augmented_terms
                  if loss.requires_grad:
                     loss.backward()
@@ -371,8 +371,8 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt2.zero_grad()
                  outputs=net2(inputs2)
-                 # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y2,params_vec2))+0.5*rho*(torch.norm(params_vec2-z,2)**2)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y2,params_vec2-z))+0.5*rho*(torch.norm(params_vec2-z,2)**2)
                  loss=criterion2(outputs,labels2)+augmented_terms
                  if loss.requires_grad:
                     loss.backward()
@@ -381,8 +381,8 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt3.zero_grad()
                  outputs=net3(inputs3)
-                 # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y3,params_vec3))+0.5*rho*(torch.norm(params_vec3-z,2)**2)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y3,params_vec3-z))+0.5*rho*(torch.norm(params_vec3-z,2)**2)
                  loss=criterion3(outputs,labels3)+augmented_terms
                  if loss.requires_grad:
                     loss.backward()

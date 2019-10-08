@@ -302,8 +302,8 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt1.zero_grad()
                  outputs=net1(inputs1)
-                 # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y1,params_vec1))+0.5*rho[ci,0]*(torch.norm(params_vec1-z,2)**2)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y1,params_vec1-z))+0.5*rho[ci,0]*(torch.norm(params_vec1-z,2)**2)
                  loss=criterion1(outputs,labels1)+augmented_terms
                  if ci in net1.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
@@ -314,8 +314,8 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt2.zero_grad()
                  outputs=net2(inputs2)
-                 # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y2,params_vec2))+0.5*rho[ci,1]*(torch.norm(params_vec2-z,2)**2)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y2,params_vec2-z))+0.5*rho[ci,1]*(torch.norm(params_vec2-z,2)**2)
                  loss=criterion2(outputs,labels2)+augmented_terms
                  if ci in net2.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec2,1)+lambda2*(torch.norm(params_vec2,2)**2)
@@ -326,8 +326,8 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt3.zero_grad()
                  outputs=net3(inputs3)
-                 # augmented lagrangian terms y^T x + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y3,params_vec3))+0.5*rho[ci,2]*(torch.norm(params_vec3-z,2)**2)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y3,params_vec3-z))+0.5*rho[ci,2]*(torch.norm(params_vec3-z,2)**2)
                  loss=criterion3(outputs,labels3)+augmented_terms
                  if ci in net3.linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec3,1)+lambda2*(torch.norm(params_vec3,2)**2)
