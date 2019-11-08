@@ -69,17 +69,26 @@ trainloader1 = torch.utils.data.DataLoader(trainset1, batch_size=default_batch, 
 trainloader2 = torch.utils.data.DataLoader(trainset2, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset2),num_workers=1)
 trainloader3 = torch.utils.data.DataLoader(trainset3, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset3),num_workers=1)
 
-testset=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
+if biased_input:
+  testset1=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
     download=True, transform=transform1)
+  testset2=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
+    download=True, transform=transform2)
+  testset3=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
+    download=True, transform=transform3)
+else:
+  testset=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
+    download=True, transform=transform1)
+  testset1=testset
+  testset2=testset
+  testset3=testset
 
-testloader=torch.utils.data.DataLoader(testset, batch_size=default_batch,
+testloader1=torch.utils.data.DataLoader(testset1, batch_size=default_batch,
     shuffle=False, num_workers=0)
-
-
-classes=('plane', 'car', 'bird', 'cat', 
-  'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-
+testloader2=torch.utils.data.DataLoader(testset2, batch_size=default_batch,
+    shuffle=False, num_workers=0)
+testloader3=torch.utils.data.DataLoader(testset3, batch_size=default_batch,
+    shuffle=False, num_workers=0)
 
 import numpy as np
 
@@ -193,19 +202,23 @@ def verification_error_check(net1,net2,net3):
   correct3=0
   total=0
 
-  for data in testloader:
+  for data in testloader1:
     images,labels=data
     outputs=net1(Variable(images))
     _,predicted=torch.max(outputs.data,1)
     correct1 += (predicted==labels).sum()
+    total += labels.size(0)
+  for data in testloader2:
+    images,labels=data
     outputs=net2(Variable(images))
     _,predicted=torch.max(outputs.data,1)
     correct2 += (predicted==labels).sum()
+  for data in testloader3:
+    images,labels=data
     outputs=net3(Variable(images))
     _,predicted=torch.max(outputs.data,1)
     correct3 += (predicted==labels).sum()
-    total += labels.size(0)
-   
+
   print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
      (total,100*correct1/total,100*correct2/total,100*correct3/total))
 
