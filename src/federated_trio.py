@@ -29,24 +29,48 @@ load_model=False
 init_model=True
 save_model=True
 check_results=True
-
-transform=transforms.Compose(
-   [transforms.ToTensor(),
-     transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
+# if input is biased, each 1/3 training data will have
+# (slightly) different normalization. Otherwise, same normalization
+biased_input=True
 
 # split 50000 training data into three
 subset1=range(0,16666)
 subset2=range(16666,33333)
 subset3=range(33333,50000)
 
+if biased_input:
+  # slightly different normalization for each subset
+  transform1=transforms.Compose(
+   [transforms.ToTensor(),
+     transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
+  transform2=transforms.Compose(
+   [transforms.ToTensor(),
+     transforms.Normalize((0.3,0.3,0.3),(0.4,0.4,0.4))])
+  transform3=transforms.Compose(
+   [transforms.ToTensor(),
+     transforms.Normalize((0.6,0.6,0.6),(0.5,0.5,0.5))])
+else:
+  # same normalization for all training data
+  transform=transforms.Compose(
+   [transforms.ToTensor(),
+     transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
+  transform1=transform
+  transform2=transform
+  transform3=transform
+
 trainset1=torchvision.datasets.CIFAR10(root='./torchdata', train=True,
-    download=True, transform=transform)
+    download=True, transform=transform1)
+trainset2=torchvision.datasets.CIFAR10(root='./torchdata', train=True,
+    download=True, transform=transform2)
+trainset3=torchvision.datasets.CIFAR10(root='./torchdata', train=True,
+    download=True, transform=transform3)
+
 trainloader1 = torch.utils.data.DataLoader(trainset1, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset1),num_workers=1)
-trainloader2 = torch.utils.data.DataLoader(trainset1, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset2),num_workers=1)
-trainloader3 = torch.utils.data.DataLoader(trainset1, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset3),num_workers=1)
+trainloader2 = torch.utils.data.DataLoader(trainset2, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset2),num_workers=1)
+trainloader3 = torch.utils.data.DataLoader(trainset3, batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subset3),num_workers=1)
 
 testset=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
-    download=True, transform=transform)
+    download=True, transform=transform1)
 
 testloader=torch.utils.data.DataLoader(testset, batch_size=default_batch,
     shuffle=False, num_workers=0)
