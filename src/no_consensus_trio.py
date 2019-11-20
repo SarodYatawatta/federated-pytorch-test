@@ -81,6 +81,32 @@ testloader2=torch.utils.data.DataLoader(testset2, batch_size=default_batch,
 testloader3=torch.utils.data.DataLoader(testset3, batch_size=default_batch,
     shuffle=False, num_workers=0)
 
+def verification_error_check(net1,net2,net3):
+  correct1=0
+  correct2=0
+  correct3=0
+  total=0
+
+  for data in testloader1:
+    images,labels=data
+    outputs=net1(Variable(images))
+    _,predicted=torch.max(outputs.data,1)
+    correct1 += (predicted==labels).sum()
+    total += labels.size(0)
+  for data in testloader2:
+    images,labels=data
+    outputs=net2(Variable(images))
+    _,predicted=torch.max(outputs.data,1)
+    correct2 += (predicted==labels).sum()
+  for data in testloader3:
+    images,labels=data
+    outputs=net3(Variable(images))
+    _,predicted=torch.max(outputs.data,1)
+    correct3 += (predicted==labels).sum()
+
+  print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
+     (total,100*correct1/total,100*correct2/total,100*correct3/total))
+
 import numpy as np
 
 # define a cnn
@@ -237,49 +263,13 @@ for epoch in range(12):
     running_loss3 +=loss.data.item()
 
     # print statistics
-    if i%(batches_for_epoch) == (batches_for_epoch-1): # after every epoch
-      #print('%f: [%d, %5d] loss: %.3f'%
-      #   (time.time()-start_time,epoch+1,i+1,running_loss/batches_for_epoch))
-      print('%f %.3f %.3f %.3f'%
-         (time.time()-start_time,running_loss1/batches_for_epoch,running_loss2/batches_for_epoch,running_loss3/batches_for_epoch))
-
-      running_loss1=0.0
-      running_loss2=0.0
-      running_loss3=0.0
-
-
+    if check_results:
+      verification_error_check(net1,net2,net3)
 
 
 print('Finished Training')
 
-
-if check_results:
-  correct1=0
-  correct2=0
-  correct3=0
-  total=0
-
-  for data in testloader1:
-    images,labels=data
-    outputs=net1(Variable(images))
-    _,predicted=torch.max(outputs.data,1)
-    correct1 += (predicted==labels).sum()
-    total += labels.size(0)
-  for data in testloader2:
-    images,labels=data
-    outputs=net2(Variable(images))
-    _,predicted=torch.max(outputs.data,1)
-    correct2 += (predicted==labels).sum()
-  for data in testloader3:
-    images,labels=data
-    outputs=net3(Variable(images))
-    _,predicted=torch.max(outputs.data,1)
-    correct3 += (predicted==labels).sum()
-
-  print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
-     (total,100*correct1/total,100*correct2/total,100*correct3/total))
-
-
+verification_error_check(net1,net2,net3)
 
 if save_model:
  torch.save({
