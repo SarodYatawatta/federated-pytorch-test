@@ -3,6 +3,7 @@ We train CNN models __without__ having access to the full dataset. The CIFAR10 d
 
 The stochastic LBFGS optimizer is provided with the code. Further details are given [in this paper](https://ieeexplore.ieee.org/document/8755567). Also see [this introduction](http://sagecal.sourceforge.net/pytorch/index.html).
 
+GPU acceleration is enabled when available, set ```use_cuda=True```.
 Files included are:
 
 ``` lbfgsnew.py ```: New LBFGS optimizer
