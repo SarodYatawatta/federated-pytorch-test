@@ -507,7 +507,7 @@ for nloop in range(Nloop):
 
  
      # <- each slave will send (y+rho*x)/rho to master
-     znew=((y1+rho[ci,0]*x1) +(y2+rho[ci,1]*x2) +(y3+rho[ci,2]*x3))/(rho[ci,0]+rho[ci,1]+rho[ci,2])
+     znew=((y1+rho[ci,0]*x1.to(mydevice)) +(y2+rho[ci,1]*x2.to(mydevice)) +(y3+rho[ci,2]*x3.to(mydevice)))/(rho[ci,0]+rho[ci,1]+rho[ci,2])
      dual_residual=torch.norm(z-znew).item()/N
 
      # decide if to stop ADMM if dual residual is too low 
@@ -516,10 +516,10 @@ for nloop in range(Nloop):
      z=znew
      # -> master will send z to all slaves
      # ADMM step 3 update Lagrange multiplier 
-     y1.add_(rho[ci,0]*(x1-z)) 
-     y2.add_(rho[ci,1]*(x2-z)) 
-     y3.add_(rho[ci,2]*(x3-z)) 
-     primal_residual=(torch.norm(x1-z).item()+torch.norm(x2-z).item()+torch.norm(x3-z).item())/(3*N)
+     y1.add_(rho[ci,0]*(x1.to(mydevice)-z)) 
+     y2.add_(rho[ci,1]*(x2.to(mydevice)-z)) 
+     y3.add_(rho[ci,2]*(x3.to(mydevice)-z)) 
+     primal_residual=(torch.norm(x1.to(mydevice)-z).item()+torch.norm(x2.to(mydevice)-z).item()+torch.norm(x3.to(mydevice)-z).item())/(3*N)
   
      
      print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,primal_residual,dual_residual))
