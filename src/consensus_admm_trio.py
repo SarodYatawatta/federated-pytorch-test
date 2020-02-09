@@ -412,14 +412,14 @@ for nloop in range(Nloop):
          x0_2=x2
          x0_3=x3
        elif (nadmm%bb_period_T)==0:
-         yhat_1=y1+rho[ci,0]*(x1-z)
-         deltay1=yhat_1-yhat0_1
+         yhat_1=y1+rho[ci,0]*(x1.to(mydevice)-z)
+         deltay1=yhat_1-yhat0_1.to(mydevice)
          deltax1=x1-x0_1
 
          # inner products
          d11=torch.dot(deltay1,deltay1)
-         d12=torch.dot(deltay1,deltax1) # note: can be negative
-         d22=torch.dot(deltax1,deltax1)
+         d12=torch.dot(deltay1,deltax1.to(mydevice)) # note: can be negative
+         d22=torch.dot(deltax1.to(mydevice),deltax1.to(mydevice))
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
          rhonew=rho[ci,0]
@@ -440,14 +440,14 @@ for nloop in range(Nloop):
          rho[ci,0]=rhonew
          ###############
 
-         yhat_2=y2+rho[ci,1]*(x2-z)
-         deltay1=yhat_2-yhat0_2
+         yhat_2=y2+rho[ci,1]*(x2.to(mydevice)-z)
+         deltay1=yhat_2-yhat0_2.to(mydevice)
          deltax1=x2-x0_2
 
          # inner products
          d11=torch.dot(deltay1,deltay1)
-         d12=torch.dot(deltay1,deltax1) # note: can be negative
-         d22=torch.dot(deltax1,deltax1)
+         d12=torch.dot(deltay1,deltax1.to(mydevice)) # note: can be negative
+         d22=torch.dot(deltax1.to(mydevice),deltax1.to(mydevice))
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
          rhonew=rho[ci,1]
@@ -468,14 +468,14 @@ for nloop in range(Nloop):
          rho[ci,1]=rhonew
          ###############
 
-         yhat_3=y3+rho[ci,2]*(x3-z)
-         deltay1=yhat_3-yhat0_3
+         yhat_3=y3+rho[ci,2]*(x3.to(mydevice)-z)
+         deltay1=yhat_3-yhat0_3.to(mydevice)
          deltax1=x3-x0_3
 
          # inner products
          d11=torch.dot(deltay1,deltay1)
-         d12=torch.dot(deltay1,deltax1) # note: can be negative
-         d22=torch.dot(deltax1,deltax1)
+         d12=torch.dot(deltay1,deltax1.to(mydevice)) # note: can be negative
+         d22=torch.dot(deltax1.to(mydevice),deltax1.to(mydevice))
     
          print('admm %d deltas=(%e,%e,%e)\n'%(nadmm,d11,d12,d22))
          rhonew=rho[ci,2]
