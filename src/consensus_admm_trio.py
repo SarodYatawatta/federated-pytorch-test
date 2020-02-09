@@ -43,6 +43,14 @@ if bb_update:
  bb_epsilon=1e-3 # threshold to stop updating
  bb_rhomax=0.1 # keep regularization below a safe upper limit
 
+# (try to) use a GPU for computation?
+use_cuda=True
+if use_cuda and torch.cuda.is_available():
+  mydevice=torch.device('cuda')
+else:
+  mydevice=torch.device('cpu')
+mycpu=torch.device('cpu')
+
 # split 50000 training data into three
 subset1=range(0,16666)
 subset2=range(16666,33333)
@@ -105,9 +113,9 @@ import numpy as np
 # define a cnn
 from simple_models import *
 
-net1=Net()
-net2=Net()
-net3=Net()
+net1=Net().to(mydevice)
+net2=Net().to(mydevice)
+net3=Net().to(mydevice)
 
 # update from saved models
 if load_model:
@@ -213,20 +221,20 @@ def verification_error_check(net1,net2,net3):
 
   for data in testloader1:
     images,labels=data
-    outputs=net1(Variable(images))
+    outputs=net1(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct1 += (predicted==labels).sum()
+    correct1 += (predicted==labels.to(mydevice)).sum()
     total += labels.size(0)
   for data in testloader2:
     images,labels=data
-    outputs=net2(Variable(images))
+    outputs=net2(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct2 += (predicted==labels).sum()
+    correct2 += (predicted==labels.to(mydevice)).sum()
   for data in testloader3:
     images,labels=data
-    outputs=net3(Variable(images))
+    outputs=net3(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct3 += (predicted==labels).sum()
+    correct3 += (predicted==labels.to(mydevice)).sum()
 
   print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
      (total,100*correct1/total,100*correct2/total,100*correct3/total))
@@ -260,7 +268,7 @@ else:
 
 # regularization (per layer, per slave)
 # Note: need to scale rho down when starting from scratch  
-rho=torch.ones(L,3)*admm_rho0
+rho=torch.ones(L,3).to(mydevice)*admm_rho0
 # this will be updated when using adaptive ADMM
 
 from lbfgsnew import LBFGSNew # custom optimizer
@@ -278,21 +286,21 @@ for nloop in range(Nloop):
    # number of parameters trained
    N=params_vec1.numel()
    # set up primal,dual variables
-   y1=torch.empty(N,dtype=torch.float,requires_grad=False)
-   y2=torch.empty(N,dtype=torch.float,requires_grad=False)
-   y3=torch.empty(N,dtype=torch.float,requires_grad=False)
+   y1=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+   y2=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+   y3=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
    y1.fill_(0.0)
    y2.fill_(0.0)
    y3.fill_(0.0)
-   z=torch.empty(N,dtype=torch.float,requires_grad=False)
+   z=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
    z.fill_(0.0)
    if bb_update: # extra storage for adaptive ADMM
-     yhat_1=torch.empty(N,dtype=torch.float,requires_grad=False)
-     yhat_2=torch.empty(N,dtype=torch.float,requires_grad=False)
-     yhat_3=torch.empty(N,dtype=torch.float,requires_grad=False)
-     x0_1=torch.empty(N,dtype=torch.float,requires_grad=False)
-     x0_2=torch.empty(N,dtype=torch.float,requires_grad=False)
-     x0_3=torch.empty(N,dtype=torch.float,requires_grad=False)
+     yhat_1=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+     yhat_2=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+     yhat_3=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+     x0_1=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+     x0_2=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+     x0_3=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
      # initialize yhat0 for all slaves
      yhat_1.fill_(0.0)
      yhat_2.fill_(0.0)
@@ -323,9 +331,9 @@ for nloop in range(Nloop):
            inputs2,labels2=data2
            inputs3,labels3=data3
            # wrap them in variable
-           inputs1,labels1=Variable(inputs1),Variable(labels1)
-           inputs2,labels2=Variable(inputs2),Variable(labels2)
-           inputs3,labels3=Variable(inputs3),Variable(labels3)
+           inputs1,labels1=Variable(inputs1).to(mydevice),Variable(labels1).to(mydevice)
+           inputs2,labels2=Variable(inputs2).to(mydevice),Variable(labels2).to(mydevice)
+           inputs3,labels3=Variable(inputs3).to(mydevice),Variable(labels3).to(mydevice)
     
            trainable=filter(lambda p: p.requires_grad, net1.parameters())
            params_vec1=torch.cat([x.view(-1) for x in list(trainable)])

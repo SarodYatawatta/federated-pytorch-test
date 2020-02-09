@@ -29,6 +29,13 @@ transform=transforms.Compose(
    [transforms.ToTensor(),
      transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
 
+# (try to) use a GPU for computation?
+use_cuda=True
+if use_cuda and torch.cuda.is_available():
+  mydevice=torch.device('cuda')
+else:
+  mydevice=torch.device('cpu')
+
 # split 50000 training data into three
 subset1=range(0,16666)
 subset2=range(16666,33333)
@@ -151,9 +158,9 @@ def ResNet18():
     return ResNet(BasicBlock, [2,2,2,2])
 
 
-net1=ResNet18()
-net2=ResNet18()
-net3=ResNet18()
+net1=ResNet18().to(mydevice)
+net2=ResNet18().to(mydevice)
+net3=ResNet18().to(mydevice)
 net1.train()
 net2.train()
 net3.train()
@@ -261,15 +268,15 @@ def verification_error_check(net1,net2,net3):
 
   for data in testloader:
     images,labels=data
-    outputs=net1(Variable(images))
+    outputs=net1(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct1 += (predicted==labels).sum()
-    outputs=net2(Variable(images))
+    correct1 += (predicted==labels.to(mydevice)).sum()
+    outputs=net2(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct2 += (predicted==labels).sum()
-    outputs=net3(Variable(images))
+    correct2 += (predicted==labels.to(mydevice)).sum()
+    outputs=net3(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct3 += (predicted==labels).sum()
+    correct3 += (predicted==labels.to(mydevice)).sum()
     total += labels.size(0)
 
   print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
@@ -345,9 +352,9 @@ for nloop in range(Nloop):
            inputs2,labels2=data2
            inputs3,labels3=data3
            # wrap them in variable
-           inputs1,labels1=Variable(inputs1),Variable(labels1)
-           inputs2,labels2=Variable(inputs2),Variable(labels2)
-           inputs3,labels3=Variable(inputs3),Variable(labels3)
+           inputs1,labels1=Variable(inputs1).to(mydevice),Variable(labels1).to(mydevice)
+           inputs2,labels2=Variable(inputs2).to(mydevice),Variable(labels2).to(mydevice)
+           inputs3,labels3=Variable(inputs3).to(mydevice),Variable(labels3).to(mydevice)
     
            trainable=filter(lambda p: p.requires_grad, net1.parameters())
            params_vec1=torch.cat([x.view(-1) for x in list(trainable)])

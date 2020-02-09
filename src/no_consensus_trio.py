@@ -24,6 +24,13 @@ average_model=False
 # (slightly) different normalization. Otherwise, same normalization
 biased_input=True
 
+# (try to) use a GPU for computation?
+use_cuda=True
+if use_cuda and torch.cuda.is_available():
+  mydevice=torch.device('cuda')
+else:
+  mydevice=torch.device('cpu')
+
 # split 50000 training data into three
 subset1=range(0,16666)
 subset2=range(16666,33333)
@@ -89,20 +96,20 @@ def verification_error_check(net1,net2,net3):
 
   for data in testloader1:
     images,labels=data
-    outputs=net1(Variable(images))
+    outputs=net1(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct1 += (predicted==labels).sum()
+    correct1 += (predicted==labels.to(mydevice)).sum()
     total += labels.size(0)
   for data in testloader2:
     images,labels=data
-    outputs=net2(Variable(images))
+    outputs=net2(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct2 += (predicted==labels).sum()
+    correct2 += (predicted==labels.to(mydevice)).sum()
   for data in testloader3:
     images,labels=data
-    outputs=net3(Variable(images))
+    outputs=net3(Variable(images).to(mydevice))
     _,predicted=torch.max(outputs.data,1)
-    correct3 += (predicted==labels).sum()
+    correct3 += (predicted==labels.to(mydevice)).sum()
 
   print('Accuracy of the network on the %d test images:%%%f %%%f %%%f'%
      (total,100*correct1/total,100*correct2/total,100*correct3/total))
@@ -111,9 +118,9 @@ import numpy as np
 
 # define a cnn
 from simple_models import *
-net1=Net1()
-net2=Net1()
-net3=Net1()
+net1=Net1().to(mydevice)
+net2=Net1().to(mydevice)
+net3=Net1().to(mydevice)
 
 
 def init_weights(m):
@@ -182,7 +189,7 @@ for epoch in range(12):
     # get the inputs
     inputs1,labels1=data1
     # wrap them in variable
-    inputs1,labels1=Variable(inputs1),Variable(labels1)
+    inputs1,labels1=Variable(inputs1).to(mydevice),Variable(labels1).to(mydevice)
 
     # parameters in linear layers
     linear1=net1.linear_layer_parameters()
@@ -210,7 +217,7 @@ for epoch in range(12):
     # get the inputs
     inputs2,labels2=data2
     # wrap them in variable
-    inputs2,labels2=Variable(inputs2),Variable(labels2)
+    inputs2,labels2=Variable(inputs2).to(mydevice),Variable(labels2).to(mydevice)
 
     # parameters in linear layers
     linear1=net2.linear_layer_parameters()
@@ -238,7 +245,7 @@ for epoch in range(12):
     # get the inputs
     inputs3,labels3=data3
     # wrap them in variable
-    inputs3,labels3=Variable(inputs3),Variable(labels3)
+    inputs3,labels3=Variable(inputs3).to(mydevice),Variable(labels3).to(mydevice)
 
     # parameters in linear layers
     linear1=net3.linear_layer_parameters()
