@@ -14,6 +14,8 @@ Files included are:
 
 ``` federated_trio.py ```: Train 3 models using 1/3 of the data, but with federated averaging
 
+``` federated_multi.py ```: Train K models using 1/K of the data, with federated averaging, K can be varied
+
 ``` consensus_admm_trio.py ```: Train 3 models using 1/3 of the data, but with consensus optimization
 
 ``` federated_trio_resnet.py ```: Train 3 ResNet18 models using 1/3 of the data, but with federated averaging
