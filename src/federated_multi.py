@@ -35,6 +35,10 @@ check_results=True
 # (slightly) different normalization. Otherwise, same normalization
 biased_input=True
 
+# Set this to true for using ResNet instead of simpler models
+# In that case, instead of one layer, one block will be trained
+use_resnet=False
+
 # (try to) use a GPU for computation?
 use_cuda=True
 if use_cuda and torch.cuda.is_available():
@@ -87,7 +91,10 @@ from simple_models import *
 net_dict={}
 
 for ck in range(K):
- net_dict[ck]=Net().to(mydevice)
+ if not use_resnet:
+  net_dict[ck]=Net().to(mydevice)
+ else:
+  net_dict[ck]=ResNet18().to(mydevice)
  # update from saved models
  if load_model:
    checkpoint=torch.load('./s'+str(ck)+'.model')
@@ -98,7 +105,9 @@ for ck in range(K):
 def init_weights(m):
   if type(m)==nn.Linear or type(m)==nn.Conv2d:
     torch.nn.init.xavier_uniform_(m.weight)
-    m.bias.data.fill_(0.01)
+    if hasattr(m, 'bias'):
+      if m.bias is not None:
+        m.bias.data.fill_(0.01)
 
 def unfreeze_one_layer(net,layer_id):
   ' set all layers to not-trainable except the layer given by layer_id (0,1,..)'
@@ -106,6 +115,23 @@ def unfreeze_one_layer(net,layer_id):
     if (ci == 2*layer_id) or (ci==2*layer_id+1):
        param.requires_grad=True
     else:
+       param.requires_grad=False
+
+def unfreeze_one_block(net,layer_id):
+  ''' set all layers to not-trainable except the layer given by layer_id (0,1,..) block
+    parameters ci, if upperindex[layer_id-1] < ci and upperindex[layer_id] >= ci
+  '''
+  upperindex=net.upidx()
+  for ci,param in enumerate(net.parameters(),0):
+    if layer_id==0:
+      if (ci<=upperindex[layer_id]):
+       param.requires_grad=True
+      else:
+       param.requires_grad=False
+    else:
+      if (ci > upperindex[layer_id-1]) and (ci<=upperindex[layer_id]):
+       param.requires_grad=True
+      else:
        param.requires_grad=False
 
 def unfreeze_all_layers(net):
@@ -150,6 +176,10 @@ def number_of_layers(net):
    pass
   return int((ci+1)/2) # because weight+bias belong to one layer
 
+def number_of_blocks(net):
+  ' get total number of blocks of layers (for ResNet) '
+  return len(net.upidx())
+
 def verification_error_check(net_dict):
   for ck in range(K):
    correct=0
@@ -179,7 +209,11 @@ criteria_dict={}
 for ck in range(K):
  criteria_dict[ck]=nn.CrossEntropyLoss()
 
-L=number_of_layers(net_dict[0])
+if not use_resnet:
+ L=number_of_layers(net_dict[0])
+else:
+ L=number_of_blocks(net_dict[0])
+
 # get layer ids in given order 0..L-1 for selective training
 np.random.seed(0)# get same list
 Li=net_dict[0].train_order_layer_ids()
@@ -196,7 +230,10 @@ for nloop in range(Nloop):
   ############ loop 0 (over layers of the network)
   for ci in Li:
    for ck in range(K):
-     unfreeze_one_layer(net_dict[ck],ci)
+     if not use_resnet:
+       unfreeze_one_layer(net_dict[ck],ci)
+     else:
+       unfreeze_one_block(net_dict[ck],ci)
    trainable=filter(lambda p: p.requires_grad, net_dict[0].parameters())
    params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
   
