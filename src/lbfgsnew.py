@@ -158,7 +158,8 @@ class LBFGSNew(Optimizer):
         ci=0
         if be_verbose:
          print('LN %d alpha=%f fnew=%f fold=%f prod=%f'%(ci,alphak,f_new,f_old,prodterm))
-        while (ci<citer and f_new > f_old + alphak*prodterm): 
+        # catch cases where f_new is NaN
+        while (ci<citer and (math.isnan(f_new) or  f_new > f_old + alphak*prodterm)):
            alphak=0.5*alphak
            self._copy_params_in(xk)
            self._add_grad(alphak, pk)
