@@ -351,7 +351,7 @@ print('Finished Training')
 if save_model:
  for ck in range(K):
    torch.save({
-     'model_state_dict':net1.state_dict(),
+     'model_state_dict':net_dict[ck].state_dict(),
      'epoch':epoch,
      'optimizer_state_dict':opt1.state_dict(),
      'running_loss':running_loss1,
