@@ -316,6 +316,6 @@ if save_model:
    torch.save({
      'model_state_dict':net_dict[ck].state_dict(),
      'epoch':epoch,
-     'optimizer_state_dict':opt1.state_dict(),
-     'running_loss':running_loss1,
+     'optimizer_state_dict':opt_dict[ck].state_dict(),
+     'running_loss':running_loss,
      },'./s'+str(ck)+'.model')
