@@ -241,3 +241,70 @@ def ResNet18():
 
 
 ####################### End of ResNet related  classes
+
+# define variational autoencoder
+########################################################
+class AutoEncoderCNN(nn.Module):
+    # variational AE CNN  CIFAR10  
+    def __init__(self):
+        super().__init__()
+        self.latent_dim=10
+        # 32x32 -> 16x16
+        self.conv1=nn.Conv2d(3, 12, 4, stride=2, padding=1)# in 1 chan, out 12 chan, kernel 4x4
+        # 16x16 -> 8x8
+        self.conv2=nn.Conv2d(12, 24, 4, stride=2,  padding=1)# in 12 chan, out 24 chan, kernel 4x4
+        # 8x8 -> 4x4
+        self.conv3=nn.Conv2d(24, 48, 4, stride=2,  padding=1)# in 24 chan, out 48 chan, kernel 4x4
+        # 4x4 -> 2x2
+        self.conv4=nn.Conv2d(48, 96, 4, stride=2,  padding=1)# in 48 chan, out 96 chan, kernel 4x4
+
+        self.fc1=nn.Linear(384,16)
+        self.fc21=nn.Linear(16,self.latent_dim)
+        self.fc22=nn.Linear(16,self.latent_dim)
+
+        self.fc3=nn.Linear(self.latent_dim,384)
+        self.tconv1=nn.ConvTranspose2d(96,48,4,stride=2,padding=1)
+        self.tconv2=nn.ConvTranspose2d(48,24,4,stride=2,padding=1)
+        self.tconv3=nn.ConvTranspose2d(24,12,4,stride=2,padding=1)
+        self.tconv4=nn.ConvTranspose2d(12,3,4,stride=2,padding=1)
+
+    def forward(self, x):
+        mu, logvar=self.encode(x)
+        z=self.reparametrize(mu,logvar)
+        return self.decode(z), mu, logvar
+
+    def encode(self, x):
+        #In  1,1,32,32
+        x=F.elu(self.conv1(x)) # 1,12,16,16
+        x=F.elu(self.conv2(x)) # 1,24,8,8
+        x=F.elu(self.conv3(x)) # 1,48,4,4
+        x=F.elu(self.conv4(x)) # 1,96,2,2
+        x=torch.flatten(x,start_dim=1) # 1,96*2*2
+        x=F.elu(self.fc1(x)) # 1,16
+        return self.fc21(x), self.fc22(x) # 1,latent_dim
+
+    def decode(self, z):
+        # In 1,latent_dim
+        x=self.fc3(z) # 1,384
+        x=torch.reshape(x,(-1,96,2,2)) # 1,96,2,2
+        x=F.elu(self.tconv1(x)) # 1,48,4,4
+        x=F.elu(self.tconv2(x)) # 1,24,8,8
+        x=F.elu(self.tconv3(x)) # 1,12,16,16
+        x=F.elu(self.tconv4(x)) # 1,3,32,32
+        return torch.sigmoid(x) # 1,3,32,32
+
+    def reparametrize(self, mu, logvar):
+        std=logvar.mul(0.5).exp_()
+        # sample eps from N(0,1)
+        if torch.cuda.is_available():
+           eps= torch.cuda.FloatTensor(std.size()).normal_()
+        else:
+           eps= torch.FloatTensor(std.size()).normal_()
+        eps=Variable(eps)
+
+        return eps.mul(std).add_(mu)
+
+    # return layer ids (in 0...11) ordered for training
+    def train_order_layer_ids(self):
+      return [0,1,2,3,4,7,8,9,10,11,5,6] 
+########################################################
