@@ -8,7 +8,7 @@ import time
 # Variational Clustering: https://arxiv.org/abs/2005.04613
 
 # How many models (==slaves)
-K=3
+K=1
 # train K models by Federated learning
 # each iteration over a subset of parameters: 1) average 2) pass back average to slaves 3) SGD step
 # initialize with pre-trained models (better to use common initialization)
@@ -111,6 +111,18 @@ def unfreeze_all_layers(net):
   for ci,param in enumerate(net.parameters(),0):
     param.requires_grad=True
 
+def unfreeze_one_block(net,layers):
+  ''' layers=[llow,lhigh]
+    make all layers in 2*llow..2*lhigh-1 trainable
+  '''
+  llow=2*layers[0]
+  lhigh=2*layers[1]-1
+  for ci,param in enumerate(net.parameters(),0):
+    if (ci >= llow) or (ci<=lhigh):
+       param.requires_grad=True
+    else:
+       param.requires_grad=False
+
 def get_trainable_values(net):
   ' return trainable parameter values as a vector (only the first parameter set)'
   trainable=filter(lambda p: p.requires_grad, net.parameters())
@@ -194,7 +206,7 @@ def loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x):
     c1=cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
     c2=cost2(ekhat[:,ci])
     c3=cost3(ekhat[:,ci],mu_xi[ci],sig2_xi[ci],mu_b[ci],sig2_b[ci])
-    #print("cluster %d costs %f,%f,%f"%(ci,c1.data.item(),c2.data.item(),c3.data.item()))
+    print("cluster %d costs %f,%f,%f"%(ci,c1.data.item(),c2.data.item(),c3.data.item()))
     loss+=c1+c2+c3
   return loss
 
@@ -217,13 +229,21 @@ if L != len(Li):
 else:
   print(Li)
 
+Bi=net_dict[0].train_order_block_ids()
+print(Bi)
+
 import torch.optim as optim
+from lbfgsnew import LBFGSNew # custom optimizer
 ############### loop 00 (over the full net)
 for nloop in range(Nloop):
   ############ loop 0 (over layers of the network)
-  for ci in Li:
+  for ci in range(len(Bi)):
    for ck in range(K):
-     unfreeze_one_layer(net_dict[ck],ci)
+     unfreeze_one_block(net_dict[ck],Bi[ci])
+     if ci==2:
+       net_dict[ck].enable_repr()
+     else:
+       net_dict[ck].disable_repr()
    trainable=filter(lambda p: p.requires_grad, net_dict[0].parameters())
    params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
   
@@ -234,7 +254,11 @@ for nloop in range(Nloop):
   
    opt_dict={}
    for ck in range(K):
-    opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0002)
+    if ci==2:
+     opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0002)
+    else:
+     opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+
   
    ############# loop 1 (Federated avaraging for subset of model)
    for nadmm in range(Nadmm):
@@ -265,9 +289,10 @@ for nloop in range(Nloop):
             # only for diagnostics
             ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th=net_dict[ck](x)
             loss1=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
-            running_loss +=loss1
-           
+            running_loss +=float(loss1)
+
             print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
+            del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th
          
 
         # Federated averaging
