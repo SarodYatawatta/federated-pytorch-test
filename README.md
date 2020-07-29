@@ -23,3 +23,5 @@ Files included are:
 ``` consensus_admm_trio_resnet.py ```: Train 3 ResNet18 models using 1/3 of the data, but with consensus optimization
 
 ``` federated_vae.py ```: Train K variational autoencoders, using federated averaging
+
+``` federated_vae_cl.py ```: Train K variational autoencoders for clustering, using federated averaging, based on [this paper](https://arxiv.org/abs/2005.04613).

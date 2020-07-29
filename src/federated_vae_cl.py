@@ -5,8 +5,10 @@ import torchvision.transforms as transforms
 import math
 import time
 
+# Variational Clustering: https://arxiv.org/abs/2005.04613
+
 # How many models (==slaves)
-K=10
+K=3
 # train K models by Federated learning
 # each iteration over a subset of parameters: 1) average 2) pass back average to slaves 3) SGD step
 # initialize with pre-trained models (better to use common initialization)
@@ -15,6 +17,9 @@ K=10
 #                loop 2: { epochs/databatches  { train; } } } }
 # repeat this Nloop times
 
+# model parameters
+Kc=10 # number of clusters
+Lc=32 # latent dimension 
 
 torch.manual_seed(69)
 # minibatch size
@@ -65,15 +70,10 @@ for ck in range(K):
 trainset_dict={}
 testset_dict={}
 trainloader_dict={}
-testloader_dict={}
 for ck in range(K):
  trainset_dict[ck]=torchvision.datasets.CIFAR10(root='./torchdata', train=True,
     download=True, transform=transforms_dict[ck])
- testset_dict[ck]=torchvision.datasets.CIFAR10(root='./torchdata', train=False,
-    download=True, transform=transforms_dict[ck])
  trainloader_dict[ck] = torch.utils.data.DataLoader(trainset_dict[ck], batch_size=default_batch, shuffle=False, sampler=torch.utils.data.SubsetRandomSampler(subsets_dict[ck]),num_workers=1)
- testloader_dict[ck]=torch.utils.data.DataLoader(testset_dict[ck], batch_size=default_batch,
-    shuffle=False, num_workers=0)
 
 import numpy as np
 
@@ -83,7 +83,7 @@ from simple_models import *
 net_dict={}
 
 for ck in range(K):
- net_dict[ck]=AutoEncoderCNN().to(mydevice)
+ net_dict[ck]=AutoEncoderCNNCL(K=Kc,L=Lc).to(mydevice)
  # update from saved models
  if load_model:
    checkpoint=torch.load('./s'+str(ck)+'.model',map_location=mydevice)
@@ -140,7 +140,6 @@ def put_trainable_values(net,X):
      params.data.copy_(X[offset:offset+numel].data.view_as(params.data))
     offset+=numel
 
-
 def number_of_layers(net):
   ' get total number of layers (note: each layers has weight and bias , so count as 2) '
   for ci,param in enumerate(net.parameters(),0):
@@ -148,19 +147,56 @@ def number_of_layers(net):
   return int((ci+1)/2) # because weight+bias belong to one layer
 
 
-reconstruction_function = nn.MSELoss(reduction='sum')
-def loss_function(recon_x, x, mu, logvar):
+################################################################################ Loss functions
+# term 1: E_qk{ log p(x|theta) }
+def cost1(pk,px_z_mu,px_z_sig2,x):
+ thisbatch_size=x.shape[0]
+ err=x-px_z_mu
+ err.pow_(2).div_(2*px_z_sig2)
+ err1=0.5*torch.log(px_z_sig2*2*math.pi)
+ loss=0
+ for ci in range(thisbatch_size):
+  loss=loss+pk[ci]*torch.sum(err[ci]+err1[ci])
+ return loss.div_(thisbatch_size)
+
+# term 2: E_qk{ log(q(k|x))  }
+def cost2(pk):
+ thisbatch_size=pk.shape[0]
+ loss=0
+ for ci in range(thisbatch_size):
+   loss=loss-pk[ci]*torch.log(pk[ci])
+ return loss.div_(thisbatch_size)
+
+
+# term 3: E_qk{ KL(q(z|x,k)||p(z|k))  }
+def cost3(pk,q_z_mu,q_z_sig2,p_z_mu,p_z_sig2):
+ thisbatch_size=pk.shape[0]
+ mudiff=p_z_mu-q_z_mu
+ mudiff.pow_(2).div_(p_z_sig2)
+ sigratio=q_z_sig2/p_z_sig2
+ loss=0
+ for ci in range(thisbatch_size):
+  loss=loss+0.5*pk[ci]*torch.sum(sigratio[ci]-torch.log(sigratio[ci])+mudiff[ci]-1)
+
+ return loss.div_(thisbatch_size)
+
+def loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x):
   """
-    recon_x: generated image
-    x : original image
-    mu : latent z mean
-    logvar: latent z log variance : log(sigma^2)
+    ekhat: q(k|x) Kx1
+    each dict item of
+    mu_xi[],sig2_xi[] : parametrize q(z|x,k) Lx1
+    mu_b[],sig2_b[] : parametrize p(z|k) Lx1
+    mu_th[],sig2_th[] : parametrize p(x|z) : size equal to x
+    x : data
   """
-  MSE=reconstruction_function(recon_x,x)
-  # loss = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-  KLD=-0.5*torch.sum(1+logvar-mu.pow(2)-logvar.exp())
-  #print('%f %f'%(MSE,KLD))
-  return MSE+KLD
+  loss=0
+  for ci in range(Kc):
+    c1=cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
+    c2=cost2(ekhat[:,ci])
+    c3=cost3(ekhat[:,ci],mu_xi[ci],sig2_xi[ci],mu_b[ci],sig2_b[ci])
+    #print("cluster %d costs %f,%f,%f"%(ci,c1.data.item(),c2.data.item(),c3.data.item()))
+    loss+=c1+c2+c3
+  return loss
 
 ##############################################################################################
 
@@ -198,7 +234,7 @@ for nloop in range(Nloop):
   
    opt_dict={}
    for ck in range(K):
-    opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.001)
+    opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0002)
   
    ############# loop 1 (Federated avaraging for subset of model)
    for nadmm in range(Nadmm):
@@ -210,25 +246,25 @@ for nloop in range(Nloop):
         for ck in range(K):
           running_loss=0.0
   
-          for i,(images, _) in enumerate(trainloader_dict[ck],0): # ignore labels
+          for i,(images, labels) in enumerate(trainloader_dict[ck],0): # ignore labels
             # get the inputs
             x=Variable(images).to(mydevice)
-    
+
             def closure1():
-                 out, mu, logvar = net_dict[ck](x)
-                 if torch.is_grad_enabled():
-                    opt_dict[ck].zero_grad()
-                 loss=loss_function(out,x,mu,logvar)
-                 if loss.requires_grad:
-                    loss.backward()
-                 return loss
+               ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th=net_dict[ck](x)
+               if torch.is_grad_enabled():
+                 opt_dict[ck].zero_grad()
+               loss=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
+               if loss.requires_grad:
+                 loss.backward()
+               return loss
   
             # ADMM step 1
             opt_dict[ck].step(closure1)
   
             # only for diagnostics
-            out, mu, logvar= net_dict[ck](x)
-            loss1=loss_function(out,x,mu,logvar).data.item()
+            ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th=net_dict[ck](x)
+            loss1=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
             running_loss +=loss1
            
             print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))

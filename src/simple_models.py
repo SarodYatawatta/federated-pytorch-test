@@ -250,7 +250,7 @@ class AutoEncoderCNN(nn.Module):
         super().__init__()
         self.latent_dim=10
         # 32x32 -> 16x16
-        self.conv1=nn.Conv2d(3, 12, 4, stride=2, padding=1)# in 1 chan, out 12 chan, kernel 4x4
+        self.conv1=nn.Conv2d(3, 12, 4, stride=2, padding=1)# in 3 chan, out 12 chan, kernel 4x4
         # 16x16 -> 8x8
         self.conv2=nn.Conv2d(12, 24, 4, stride=2,  padding=1)# in 12 chan, out 24 chan, kernel 4x4
         # 8x8 -> 4x4
@@ -307,4 +307,114 @@ class AutoEncoderCNN(nn.Module):
     # return layer ids (in 0...11) ordered for training
     def train_order_layer_ids(self):
       return [0,1,2,3,4,7,8,9,10,11,5,6] 
+########################################################
+
+class AutoEncoderCNNCL(nn.Module):
+    # variational AE CNN  CIFAR10 Clustering 
+    # Variational Clustering: https://arxiv.org/abs/2005.04613
+    def __init__(self,K=10,L=32):
+        super().__init__()
+        self.K=K # clusters
+        self.L=L # latent dimension
+        self.conv1=nn.Conv2d(3, 12, 4, stride=2, padding=1)# 
+        self.conv2=nn.Conv2d(12, 24, 4, stride=2, padding=1)#
+        self.conv3=nn.Conv2d(24, 48, 4, stride=2, padding=1)#
+        self.conv4=nn.Conv2d(48, 96, 4, stride=2, padding=1)#
+
+        self.fc11=nn.Linear(384,128)
+        self.fc12=nn.Linear(128,64)
+        self.fc13=nn.Linear(64,self.K)
+        self.fc21=nn.Linear(384+self.K,128)
+        self.fc22=nn.Linear(128,128)
+        self.fc23=nn.Linear(128,self.L)
+        self.fc24=nn.Linear(128,self.L)
+
+        self.fc14=nn.Linear(self.K,64)
+        self.fc15=nn.Linear(64,64)
+        self.fc16=nn.Linear(64,self.L)
+        self.fc17=nn.Linear(64,self.L)
+
+        self.fc25=nn.Linear(self.L,384)
+        self.tconv1=nn.ConvTranspose2d(96,48,4,stride=2, padding=1)
+        self.tconv2=nn.ConvTranspose2d(48,24,4,stride=2, padding=1)
+        self.tconv3=nn.ConvTranspose2d(24,12,4,stride=2, padding=1)
+        self.tconv4=nn.ConvTranspose2d(12,3,4,stride=2, padding=1)
+        self.tconv5=nn.ConvTranspose2d(12,3,4,stride=2, padding=1)
+
+    def forward(self, x):
+        ekhat=self.encodeclus(x)
+        mu_xi={}
+        sig2_xi={}
+        mu_b={}
+        sig2_b={}
+        mu_th={}
+        sig2_th={}
+        for ci in range(self.K):
+          ek1=torch.zeros(ekhat.shape)
+          ek1[:,ci]=1
+          mu_xi[ci],sig2_xi[ci]=self.encode(x, ek1)
+          z=self.reparametrize(mu_xi[ci],sig2_xi[ci])
+          mu_b[ci], sig2_b[ci], mu_th[ci], sig2_th[ci]=self.decode(ek1,z)
+        return ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th
+
+    def encodeclus(self, x):
+        #In  1,3,32,32
+        x=F.elu(self.conv1(x)) # 1,12,16,16
+        x=F.elu(self.conv2(x)) # 1,24,8,8
+        x=F.elu(self.conv3(x)) # 1,48,4,4
+        x=F.elu(self.conv4(x)) # 1,96,2,2
+        x1=torch.flatten(x,start_dim=1) # 1,96*2*2=384
+        x=F.elu(self.fc11(x1)) # 1,128
+        x=F.elu(self.fc12(x)) # 1,64
+        ekhat=F.elu(self.fc13(x)) # 1,K
+        # ek: parametrize q(k|x)
+        return F.softmax(ekhat,dim=1) # vectors of K
+
+
+    def encode(self, x, ek):
+        #In  1,3,32,32 and 1,K
+        x=F.elu(self.conv1(x)) # 1,12,16,16
+        x=F.elu(self.conv2(x)) # 1,24,8,8
+        x=F.elu(self.conv3(x)) # 1,48,4,4
+        x=F.elu(self.conv4(x)) # 1,96,2,2
+        x1=torch.flatten(x,start_dim=1) # 1,96*2*2=384
+        y=F.elu(self.fc21(torch.cat((x1,ek),1))) # in 1,K+384, out 1,128
+        y=F.elu(self.fc22(y)) # 1,128
+        y1=F.elu(self.fc23(y)) # 1,L
+        y2=F.elu(self.fc24(y)) # 1,L
+        # mu_xi, sig2_xi: parametrize q(z|x,k)
+        return y1,F.softplus(y2) # vectors of L, L
+
+    def decode(self, ek, z):
+        # In 1,K and 1,L
+        x=F.elu(self.fc14(ek)) # 1,64
+        x=F.elu(self.fc15(x)) # 1,64
+        x1=(self.fc16(x)) # 1,L
+        x2=(self.fc17(x)) # 1,L
+        x=F.elu(self.fc25(z)) # 1,384
+        x=torch.reshape(x,(-1,96,2,2)) # 1,96,2,2
+        x=F.elu(self.tconv1(x)) # 1,48,4,4
+        x=F.elu(self.tconv2(x)) # 1,24,8,8
+        x=F.elu(self.tconv3(x)) # 1,12,16,16
+        y1=F.elu(self.tconv4(x)) # 1,3,32,32
+        y2=F.elu(self.tconv5(x)) # 1,3,32,32
+        # mu_b, sig2_b, mu_th, sig2_th
+        # mu_b, sig2_b: parametrize p(z|k)
+        # mu_th, sig2_th: parametrize p(x|z)
+        return x1,F.softplus(x2),y1,F.softplus(y2) # 1,L; 1,L; 1,3,32,32; 1,3,32,32
+
+    def reparametrize(self, mu, sig2):
+        std=sig2.sqrt()
+        # sample eps from N(0,1)
+        if torch.cuda.is_available():
+           eps= torch.cuda.FloatTensor(std.size()).normal_()
+        else:
+           eps= torch.FloatTensor(std.size()).normal_()
+        eps=Variable(eps)
+
+        return eps.mul(std).add_(mu)
+
+    # return layer ids (in 0...20) ordered for training
+    def train_order_layer_ids(self):
+      return [ii for ii in range(0,21)]
 ########################################################
