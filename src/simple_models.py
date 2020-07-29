@@ -316,6 +316,7 @@ class AutoEncoderCNNCL(nn.Module):
         super().__init__()
         self.K=K # clusters
         self.L=L # latent dimension
+        self.repr_flag=True # turn on reparametrization by default
         self.conv1=nn.Conv2d(3, 12, 4, stride=2, padding=1)# 
         self.conv2=nn.Conv2d(12, 24, 4, stride=2, padding=1)#
         self.conv3=nn.Conv2d(24, 48, 4, stride=2, padding=1)#
@@ -341,6 +342,11 @@ class AutoEncoderCNNCL(nn.Module):
         self.tconv4=nn.ConvTranspose2d(12,3,4,stride=2, padding=1)
         self.tconv5=nn.ConvTranspose2d(12,3,4,stride=2, padding=1)
 
+    def enable_repr(self):
+      self.repr_flag=True # turn on reparametrization
+    def disable_repr(self):
+      self.repr_flag=True # turn off reparametrization
+
     def forward(self, x):
         ekhat=self.encodeclus(x)
         mu_xi={}
@@ -350,11 +356,17 @@ class AutoEncoderCNNCL(nn.Module):
         mu_th={}
         sig2_th={}
         for ci in range(self.K):
-          ek1=torch.zeros(ekhat.shape)
+          if torch.cuda.is_available():
+           ek1=torch.cuda.FloatTensor(ekhat.shape).fill_(0)
+          else:
+           ek1=torch.FloatTensor(ekhat.shape).fill_(0)
+
           ek1[:,ci]=1
           mu_xi[ci],sig2_xi[ci]=self.encode(x, ek1)
           z=self.reparametrize(mu_xi[ci],sig2_xi[ci])
           mu_b[ci], sig2_b[ci], mu_th[ci], sig2_th[ci]=self.decode(ek1,z)
+          del ek1
+
         return ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th
 
     def encodeclus(self, x):
@@ -404,6 +416,9 @@ class AutoEncoderCNNCL(nn.Module):
         return x1,F.softplus(x2),y1,F.softplus(y2) # 1,L; 1,L; 1,3,32,32; 1,3,32,32
 
     def reparametrize(self, mu, sig2):
+        if not self.repr_flag: # no reparametrization
+          return mu
+
         std=sig2.sqrt()
         # sample eps from N(0,1)
         if torch.cuda.is_available():
@@ -417,4 +432,10 @@ class AutoEncoderCNNCL(nn.Module):
     # return layer ids (in 0...20) ordered for training
     def train_order_layer_ids(self):
       return [ii for ii in range(0,21)]
+
+    # low,high: layers 2*low...2*high-1 are trained
+    def train_order_block_ids(self):
+      # encoder, decoder, latent space
+      return [[0,4],[16,21],[4,16]]
+
 ########################################################
