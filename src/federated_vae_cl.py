@@ -23,10 +23,10 @@ Lc=32 # latent dimension
 
 torch.manual_seed(69)
 # minibatch size
-default_batch=128 # no. of batches per model is (50000/K)/default_batch
-Nloop=12 # how many loops over the whole network
+default_batch=256 # no. of batches per model is (50000/K)/default_batch
+Nloop=1 # how many loops over the whole network
 Nepoch=1 # how many epochs?
-Nadmm=3 # how many FA iterations
+Nadmm=1 # how many FA iterations
 
 load_model=False
 init_model=True
@@ -118,7 +118,7 @@ def unfreeze_one_block(net,layers):
   llow=2*layers[0]
   lhigh=2*layers[1]-1
   for ci,param in enumerate(net.parameters(),0):
-    if (ci >= llow) or (ci<=lhigh):
+    if (ci >= llow) and (ci<=lhigh):
        param.requires_grad=True
     else:
        param.requires_grad=False
@@ -255,7 +255,7 @@ for nloop in range(Nloop):
    opt_dict={}
    for ck in range(K):
     if ci==2:
-     opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0002)
+     opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0001)
     else:
      opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
 
