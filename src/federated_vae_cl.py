@@ -28,6 +28,10 @@ Nloop=1 # how many loops over the whole network
 Nepoch=1 # how many epochs?
 Nadmm=1 # how many FA iterations
 
+# regularization
+lambda1=0.01 # L1
+lambda2=0.01 # L2
+
 load_model=False
 init_model=True
 save_model=True
@@ -249,6 +253,8 @@ for nloop in range(Nloop):
   
    # number of parameters trained
    N=params_vec1.numel()
+   del trainable,params_vec1
+
    z=torch.empty(N,dtype=torch.float,requires_grad=False)
    z.fill_(0.0)
   
@@ -274,11 +280,15 @@ for nloop in range(Nloop):
             # get the inputs
             x=Variable(images).to(mydevice)
 
+            trainable=filter(lambda p: p.requires_grad, net_dict[ck].parameters())
+            params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
+
             def closure1():
                ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th=net_dict[ck](x)
                if torch.is_grad_enabled():
                  opt_dict[ck].zero_grad()
                loss=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
+               loss+=lambda1*torch.norm(params_vec1,1)+lambda2*torch.norm(params_vec1,2)**2
                if loss.requires_grad:
                  loss.backward()
                return loss
@@ -292,7 +302,7 @@ for nloop in range(Nloop):
             running_loss +=float(loss1)
 
             print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
-            del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th
+            del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,trainable,params_vec1
          
 
         # Federated averaging
