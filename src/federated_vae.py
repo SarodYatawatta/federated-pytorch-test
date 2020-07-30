@@ -229,9 +229,10 @@ for nloop in range(Nloop):
             # only for diagnostics
             out, mu, logvar= net_dict[ck](x)
             loss1=loss_function(out,x,mu,logvar).data.item()
-            running_loss +=loss1
-           
+            running_loss +=float(loss1)
+
             print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
+            del x,loss1,out,mu,logvar
          
 
         # Federated averaging
