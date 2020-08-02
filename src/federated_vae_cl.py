@@ -6,6 +6,7 @@ import math
 import time
 
 # Variational Clustering: https://arxiv.org/abs/2005.04613
+# Also https://arxiv.org/abs/1712.07788
 
 # How many models (==slaves)
 K=1
@@ -23,14 +24,13 @@ Lc=32 # latent dimension
 
 torch.manual_seed(69)
 # minibatch size
-default_batch=256 # no. of batches per model is (50000/K)/default_batch
+default_batch=128 # no. of batches per model is (50000/K)/default_batch
 Nloop=1 # how many loops over the whole network
 Nepoch=1 # how many epochs?
 Nadmm=1 # how many FA iterations
 
 # regularization
-lambda1=0.01 # L1
-lambda2=0.01 # L2
+lambda2=0.001 # L2
 
 load_model=False
 init_model=True
@@ -165,6 +165,7 @@ def number_of_layers(net):
 
 ################################################################################ Loss functions
 # term 1: E_qk{ log p(x|theta) }
+# weighted reconstruction loss
 def cost1(pk,px_z_mu,px_z_sig2,x):
  thisbatch_size=x.shape[0]
  err=x-px_z_mu
@@ -175,16 +176,26 @@ def cost1(pk,px_z_mu,px_z_sig2,x):
   loss=loss+pk[ci]*torch.sum(err[ci]+err1[ci])
  return loss.div_(thisbatch_size)
 
-# term 2: E_qk{ log(q(k|x))  }
+# term 2: E_qk{ -log(q(k|x))  }
+# sample-wise entropy
 def cost2(pk):
  thisbatch_size=pk.shape[0]
  loss=0
  for ci in range(thisbatch_size):
-   loss=loss-pk[ci]*torch.log(pk[ci])
+   loss=loss-pk[ci]*torch.log(pk[ci]+1e-9) # add delta to avoid NaN
  return loss.div_(thisbatch_size)
+
+# term 21: E_qk{ log(\barq(k|x))  }
+# -ve batch-wise entropy
+def cost21(pk):
+ # average over batch size
+ pbar=torch.mean(pk,0)
+ loss=pbar*torch.log(pbar+1e-9) # add delta to avoid NaN
+ return loss
 
 
 # term 3: E_qk{ KL(q(z|x,k)||p(z|k))  }
+# KL divergence
 def cost3(pk,q_z_mu,q_z_sig2,p_z_mu,p_z_sig2):
  thisbatch_size=pk.shape[0]
  mudiff=p_z_mu-q_z_mu
@@ -205,13 +216,17 @@ def loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x):
     mu_th[],sig2_th[] : parametrize p(x|z) : size equal to x
     x : data
   """
+  # scale up entropy
+  alpha=100.0
+  beta=100.0
   loss=0
   for ci in range(Kc):
-    c1=cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
+    c1=alpha*cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
     c2=cost2(ekhat[:,ci])
+    c21=cost21(ekhat[:,ci])
     c3=cost3(ekhat[:,ci],mu_xi[ci],sig2_xi[ci],mu_b[ci],sig2_b[ci])
-    print("cluster %d costs %f,%f,%f"%(ci,c1.data.item(),c2.data.item(),c3.data.item()))
-    loss+=c1+c2+c3
+    #print("cluster %d costs %f,%f,%f,%f"%(ci,c1.data.item(),c2.data.item(),c21.data.item(),c3.data.item()))
+    loss+=c1+alpha*(c2+c3)+beta*c21
   return loss
 
 ##############################################################################################
@@ -244,10 +259,10 @@ for nloop in range(Nloop):
   for ci in range(len(Bi)):
    for ck in range(K):
      unfreeze_one_block(net_dict[ck],Bi[ci])
-     if ci==2:
-       net_dict[ck].enable_repr()
+     if ci==2: # latent space
+      net_dict[ck].enable_repr()
      else:
-       net_dict[ck].disable_repr()
+      net_dict[ck].disable_repr()
    trainable=filter(lambda p: p.requires_grad, net_dict[0].parameters())
    params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
   
@@ -260,10 +275,8 @@ for nloop in range(Nloop):
   
    opt_dict={}
    for ck in range(K):
-    if ci==2:
      opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0001)
-    else:
-     opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+     #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
 
   
    ############# loop 1 (Federated avaraging for subset of model)
@@ -276,7 +289,7 @@ for nloop in range(Nloop):
         for ck in range(K):
           running_loss=0.0
   
-          for i,(images, labels) in enumerate(trainloader_dict[ck],0): # ignore labels
+          for i,(images, _) in enumerate(trainloader_dict[ck],0): # ignore labels
             # get the inputs
             x=Variable(images).to(mydevice)
 
@@ -288,7 +301,7 @@ for nloop in range(Nloop):
                if torch.is_grad_enabled():
                  opt_dict[ck].zero_grad()
                loss=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
-               loss+=lambda1*torch.norm(params_vec1,1)+lambda2*torch.norm(params_vec1,2)**2
+               loss+=lambda2*torch.norm(params_vec1,2)**2
                if loss.requires_grad:
                  loss.backward()
                return loss
@@ -300,6 +313,13 @@ for nloop in range(Nloop):
             ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th=net_dict[ck](x)
             loss1=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
             running_loss +=float(loss1)
+
+            for k in range(Kc):
+              c1=cost1(ekhat[:,k],mu_th[k],sig2_th[k],x)
+              c2=cost2(ekhat[:,k])
+              c21=cost21(ekhat[:,k])
+              c3=cost3(ekhat[:,k],mu_xi[k],sig2_xi[k],mu_b[k],sig2_b[k])
+              print("cluster %d costs %f,%f,%f,%f"%(k,c1.data.item(),c2.data.item(),c21.data.item(),c3.data.item()))
 
             print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
             del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,trainable,params_vec1
