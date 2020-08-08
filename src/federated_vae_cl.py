@@ -186,12 +186,12 @@ def cost2(pk):
  return loss.div_(thisbatch_size)
 
 # term 21: E_qk{ log(\barq(k|x))  }
-# -ve batch-wise entropy
+# 1 / batch-wise entropy
 def cost21(pk):
  # average over batch size
  pbar=torch.mean(pk,0)
- loss=pbar*torch.log(pbar+1e-9) # add delta to avoid NaN
- return loss
+ loss=-pbar*torch.log(pbar+1e-9) # add delta to avoid NaN
+ return 1/loss
 
 
 # term 3: E_qk{ KL(q(z|x,k)||p(z|k))  }
@@ -217,11 +217,11 @@ def loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x):
     x : data
   """
   # scale up entropy
-  alpha=100.0
-  beta=100.0
+  alpha=10.0
+  beta=10.0
   loss=0
   for ci in range(Kc):
-    c1=alpha*cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
+    c1=cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
     c2=cost2(ekhat[:,ci])
     c21=cost21(ekhat[:,ci])
     c3=cost3(ekhat[:,ci],mu_xi[ci],sig2_xi[ci],mu_b[ci],sig2_b[ci])
@@ -275,8 +275,10 @@ for nloop in range(Nloop):
   
    opt_dict={}
    for ck in range(K):
-     opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0001)
-     #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+     if ci==2:
+       opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.0001)
+     else:
+       opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
 
   
    ############# loop 1 (Federated avaraging for subset of model)
