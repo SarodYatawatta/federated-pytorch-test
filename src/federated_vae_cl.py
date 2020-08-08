@@ -191,7 +191,7 @@ def cost21(pk):
  # average over batch size
  pbar=torch.mean(pk,0)
  loss=-pbar*torch.log(pbar+1e-9) # add delta to avoid NaN
- return 1/loss
+ return 1/(loss+1e-9)
 
 
 # term 3: E_qk{ KL(q(z|x,k)||p(z|k))  }
@@ -218,7 +218,7 @@ def loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x):
   """
   # scale up entropy
   alpha=10.0
-  beta=10.0
+  beta=1.0
   loss=0
   for ci in range(Kc):
     c1=cost1(ekhat[:,ci],mu_th[ci],sig2_th[ci],x)
