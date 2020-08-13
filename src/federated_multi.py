@@ -117,7 +117,7 @@ def verification_error_check(net_dict):
      total += labels.size(0)
 
    print('Accuracy of the network %d on the %d test images:%%%f'%
-     (ck,total,100*correct/total))
+     (ck,total,100*correct//total))
 ##############################################################################################
 
 if init_model:
