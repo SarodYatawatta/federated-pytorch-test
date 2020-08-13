@@ -97,7 +97,7 @@ for ck in range(K):
   net_dict[ck]=ResNet18().to(mydevice)
  # update from saved models
  if load_model:
-   checkpoint=torch.load('./s'+str(ck)+'.model')
+   checkpoint=torch.load('./s'+str(ck)+'.model',map_location=mydevice)
    net_dict[ck].load_state_dict(checkpoint['model_state_dict'])
    net_dict[ck].train()
 
