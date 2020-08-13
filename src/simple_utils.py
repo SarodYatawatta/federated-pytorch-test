@@ -74,3 +74,8 @@ def number_of_layers(net):
   for ci,param in enumerate(net.parameters(),0):
    pass
   return int((ci+1)/2) # because weight+bias belong to one layer
+
+def number_of_blocks(net):
+  ' get total number of blocks of layers (for ResNet) '
+  return len(net.upidx())
+
