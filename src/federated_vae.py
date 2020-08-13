@@ -183,7 +183,7 @@ for nloop in range(Nloop):
         # Federated averaging
         x_dict={}
         for ck in range(K):
-          x_dict[ck]=get_trainable_values(net_dict[ck])
+          x_dict[ck]=get_trainable_values(net_dict[ck],mydevice)
 
         znew=torch.zeros(x_dict[0].shape)
         for ck in range(K):

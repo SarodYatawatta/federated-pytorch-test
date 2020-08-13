@@ -5,8 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# device for computing: CPU or GPU
-global mydevice
 ########################################################################### helper functions
 def init_weights(m):
   if type(m)==nn.Linear or type(m)==nn.Conv2d:
@@ -40,14 +38,17 @@ def unfreeze_one_block(net,layers):
     else:
        param.requires_grad=False
 
-def get_trainable_values(net):
+def get_trainable_values(net,mydevice=None):
   ' return trainable parameter values as a vector (only the first parameter set)'
   trainable=filter(lambda p: p.requires_grad, net.parameters())
   paramlist=list(trainable) 
   N=0
   for params in paramlist:
     N+=params.numel()
-  X=torch.empty(N,dtype=torch.float).to(mydevice)
+  if mydevice:
+   X=torch.empty(N,dtype=torch.float).to(mydevice)
+  else:
+   X=torch.empty(N,dtype=torch.float)
   X.fill_(0.0)
   offset=0
   for params in paramlist:
