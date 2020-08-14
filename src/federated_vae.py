@@ -138,7 +138,7 @@ for nloop in range(Nloop):
   
    # number of parameters trained
    N=params_vec1.numel()
-   z=torch.empty(N,dtype=torch.float,requires_grad=False)
+   z=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
    z.fill_(0.0)
   
    opt_dict={}
@@ -185,7 +185,7 @@ for nloop in range(Nloop):
         for ck in range(K):
           x_dict[ck]=get_trainable_values(net_dict[ck],mydevice)
 
-        znew=torch.zeros(x_dict[0].shape)
+        znew=torch.zeros(x_dict[0].shape).to(mydevice)
         for ck in range(K):
          znew=znew+x_dict[ck]
         znew=znew/K
