@@ -25,3 +25,5 @@ Files included are:
 ``` federated_vae.py ```: Train K variational autoencoders, using federated averaging
 
 ``` federated_vae_cl.py ```: Train K variational autoencoders for clustering, using federated averaging, based on [this paper](https://arxiv.org/abs/2005.04613).
+
+``` federated_cpc.py ```: Train K models using contrastive predictive coding, using LOFAR data, based on [this paper](https://arxiv.org/abs/1905.09272).

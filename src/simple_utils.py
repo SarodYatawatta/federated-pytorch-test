@@ -26,6 +26,11 @@ def unfreeze_all_layers(net):
   for ci,param in enumerate(net.parameters(),0):
     param.requires_grad=True
 
+def freeze_all_layers(net):
+  ' set all layers to not-trainable'
+  for ci,param in enumerate(net.parameters(),0):
+    param.requires_grad=False
+
 def unfreeze_one_block(net,layers):
   ''' layers=[llow,lhigh]
     make all layers in 2*llow..2*lhigh-1 trainable

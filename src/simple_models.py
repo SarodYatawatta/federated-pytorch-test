@@ -439,3 +439,86 @@ class AutoEncoderCNNCL(nn.Module):
       return [[0,4],[16,21],[4,16]]
 
 ########################################################
+# Encoder, Context generator and Predictor for CPC
+class EncoderCNN(nn.Module):
+   def __init__(self,latent_dim=1024):
+     super(EncoderCNN,self).__init__()
+     self.latent_dim=latent_dim
+     # 32x32 -> 16x16
+     self.conv1=nn.Conv2d(8, 32, 4, stride=2, padding=1)# in 8 chan, out 32 chan, kernel 4x4
+     # 16x16 -> 8x8
+     self.conv2=nn.Conv2d(32, self.latent_dim//4, 4, stride=2,  padding=1)# in 32 chan, out latent/4 chan, kernel 4x4
+     # 8x8 -> 4x4
+     self.conv3=nn.Conv2d(self.latent_dim//4, self.latent_dim//2, 4, stride=2,  padding=1)# in latent/4 chan, out latent/2 chan, kernel 4x4
+     # 4x4 -> 2x2
+     self.conv4=nn.Conv2d(self.latent_dim//2, self.latent_dim, 4, stride=2,  padding=1)# in latent/2 chan, out latent_dim chan, kernel 4x4
+
+   def forward(self,x):
+     x=F.elu(self.conv1(x))
+     x=F.elu(self.conv2(x))
+     x=F.elu(self.conv3(x))
+     x=F.elu(self.conv4(x))
+     x= F.avg_pool2d(x,2).squeeze()
+     return x
+
+   # return layer ids (in 0...7) ordered for training
+   def train_order_layer_ids(self):
+      return [ii for ii in range(0,8)]
+
+   # low,high: layers 2*low...2*high-1 are trained
+   def train_order_block_ids(self):
+      # divide to two blocks
+      return [[0,2],[2,4]]
+
+
+# pixelCNN  to create context from latents
+class ContextgenCNN(nn.Module):
+  def __init__(self,latent_dim=1024):
+    super(ContextgenCNN,self).__init__()
+    self.latent_dim=latent_dim
+    self.conv1=nn.Conv2d(self.latent_dim,self.latent_dim//4,1,stride=1,padding=0,bias=False)
+    self.conv2=nn.Conv2d(self.latent_dim//4,self.latent_dim//4,2,stride=1,padding=1,bias=False)
+    self.conv3=nn.Conv2d(self.latent_dim//4,self.latent_dim//2,2,stride=1,padding=0,bias=False)
+    self.conv4=nn.Conv2d(self.latent_dim//2,self.latent_dim,1,stride=1,padding=0,bias=False)
+
+  def forward(self, x):
+    x=F.elu(self.conv1(x))
+    x=F.elu(self.conv2(x))
+    x=F.elu(self.conv3(x))
+    x=F.elu(self.conv4(x))
+    return x
+
+  # return layer ids (in 0...3) ordered for training
+  def train_order_layer_ids(self):
+      return [ii for ii in range(0,4)]
+
+  # low,high: layers 2*low...2*high-1 are trained
+  def train_order_block_ids(self):
+      # full net
+      return [[0,2]]
+
+
+# prediction network
+class PredictorCNN(nn.Module):
+  def __init__(self,latent_dim=1024,reduced_dim=64):
+    super(PredictorCNN,self).__init__()
+    self.latent_dim=latent_dim
+    self.reduced_dim=reduced_dim
+    self.conv1=nn.Conv2d(self.latent_dim,self.reduced_dim,1,bias=False)
+    self.conv2=nn.Conv2d(self.latent_dim,self.reduced_dim,1,bias=False)
+
+  def forward(self, latents, context):
+    reduced_latents=self.conv1(latents)
+    prediction=self.conv2(context)
+    return reduced_latents,prediction
+
+  # return layer ids (in 0...1) ordered for training
+  def train_order_layer_ids(self):
+      return [ii for ii in range(0,2)]
+
+  # low,high: layers 2*low...2*high-1 are trained
+  def train_order_block_ids(self):
+      # full net
+      return [[0,1]]
+
+########################################################
