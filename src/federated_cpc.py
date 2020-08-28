@@ -158,8 +158,9 @@ def InfoNCE(z,zhat):
   # find (normalized) inner products of patchx*patchy values
   zz=torch.zeros(patchx*patchy,patchx*patchy).to(mydevice,non_blocking=True)
   for ci in range(patchx*patchy):
+    Znrm=torch.norm(Z[:,ci])
     for cj in range(patchx*patchy):
-      zz[ci,cj]=torch.dot(Z[:,ci],Zhat[:,cj])/(torch.norm(Z[:,ci])*torch.norm(Zhat[:,cj]))
+      zz[ci,cj]=torch.dot(Z[:,ci],Zhat[:,cj])/(Znrm*torch.norm(Zhat[:,cj]))
 
   # positive sample: diagonal, negative samples: off-diagonal of each row
   loss=0
