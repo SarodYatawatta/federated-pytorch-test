@@ -10,8 +10,8 @@ import numpy as np
 # https://arxiv.org/abs/1905.09272
 # Working with LOFAR HDF5 data files
 
-# How many models (==workers==number of H5 files/SAPs)
-K=2
+# How many models (==workers=='number of H5 files' and SAPs)
+K=4
 
 # train K models by Federated learning
 # each iteration over a subset of parameters: 1) average 2) pass back average to slaves 3) optimization step
@@ -30,13 +30,13 @@ Rc=32
 
 # minibatch size (==baselines selected)
 batch_size=4
-Nloop=1 # how many loops over the whole network
+Nloop=2 # how many loops over the whole network
 Niter=10 # how many minibatches are considered for an epoch
-Nadmm=1 # how many FA iterations
+Nadmm=1 # how many Federated Averaging iterations
 
-load_model=False
-init_model=True
-save_model=True
+load_model=True # enable this to load saved models
+init_model=False # enable this to initialize all K models to same (not when loading saved model)
+save_model=True # save model
 be_verbose=True
 
 # (try to) use a GPU for computation?
@@ -50,7 +50,9 @@ else:
 #import torchvision.transforms as transforms
 
 def get_data_minibatch(filename,batch_size=2,patch_size=32,SAP='0'):
-  # open LOFAR H5 file, read data from a SAP, sample patches and return input for training
+  # open LOFAR H5 file, read data from a SAP,
+  # randomly select number of baselines equal to batch_size
+  # and sample patches and return input for training
   f=h5py.File(filename,'r')
   # select a dataset SAP (int8)
   g=f['measurement']['saps'][SAP]['visibilities']
@@ -61,7 +63,7 @@ def get_data_minibatch(filename,batch_size=2,patch_size=32,SAP='0'):
   # h shape : nbase, nfreq, npol
 
   x=torch.zeros(batch_size,8,ntime,nfreq).to(mydevice,non_blocking=True)
-  # select baseline set
+  # randomly select baseline subset
   baselinelist=np.random.randint(0,nbase,batch_size)
 
   ck=0
@@ -135,7 +137,9 @@ for ck in range(K):
 ### specify data files and subarray pointings (SAPs)
 # both should have K items
 file_list=['/home/sarod/L785751.MS_extract.h5','/home/sarod/L785751.MS_extract.h5']
+file_list=file_list+['/home/sarod/L785747.MS_extract.h5','/home/sarod/L785757.MS_extract.h5']
 sap_list=['1','2']
+sap_list=sap_list+['0','0']
 assert len(sap_list)==K and len(file_list)==K
 
 ################################################################################ Loss function
@@ -232,14 +236,14 @@ for nloop in range(Nloop):
      opt_dict={}
      for ck in range(K):
        if mdl==0:
-          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
-          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
        elif mdl==1:
-          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
-          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
        else:
-          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
-          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
 
      for nadmm in range(Nadmm):
         for ck in range(K):
@@ -265,7 +269,8 @@ for nloop in range(Nloop):
                    loss.backward()
                    # clip gradient values
                    #torch.nn.utils.clip_grad_value_(solvable_parameters,1e3)
-                #print('%d %d %d %f'%(nadmm,ck,niter,loss.data.item()))
+                   if be_verbose:
+                     print('%d %d %d %f'%(nadmm,ck,niter,loss.data.item()))
                 return loss
               opt_dict[ck].step(closure)
               del y
