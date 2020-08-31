@@ -34,8 +34,8 @@ Nloop=2 # how many loops over the whole network
 Niter=10 # how many minibatches are considered for an epoch
 Nadmm=1 # how many Federated Averaging iterations
 
-load_model=True # enable this to load saved models
-init_model=False # enable this to initialize all K models to same (not when loading saved model)
+load_model=False # enable this to load saved models
+init_model=True # enable this to initialize all K models to same (not when loading saved model)
 save_model=True # save model
 be_verbose=True
 
@@ -136,8 +136,10 @@ for ck in range(K):
 
 ### specify data files and subarray pointings (SAPs)
 # both should have K items
-file_list=['/home/sarod/L785751.MS_extract.h5','/home/sarod/L785751.MS_extract.h5']
-file_list=file_list+['/home/sarod/L785747.MS_extract.h5','/home/sarod/L785757.MS_extract.h5']
+#file_list=['/home/sarod/L785751.MS_extract.h5','/home/sarod/L785751.MS_extract.h5']
+#file_list=file_list+['/home/sarod/L785747.MS_extract.h5','/home/sarod/L785757.MS_extract.h5']
+file_list=['../../drive/My\ Drive/Colab\ Notebooks/L785751.MS_extract.h5','../../drive/My\ Drive/Colab\ Notebooks/L785751.MS_extract.h5']
+file_list=file_list+['../../drive/My\ Drive/Colab\ Notebooks/L785747.MS_extract.h5','../../drive/My\ Drive/Colab\ Notebooks/L785757.MS_extract.h5']
 sap_list=['1','2']
 sap_list=sap_list+['0','0']
 assert len(sap_list)==K and len(file_list)==K
@@ -236,14 +238,14 @@ for nloop in range(Nloop):
      opt_dict={}
      for ck in range(K):
        if mdl==0:
-          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
-          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
+          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
        elif mdl==1:
-          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
-          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
+          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
        else:
-          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
-          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
+          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
 
      for nadmm in range(Nadmm):
         for ck in range(K):
