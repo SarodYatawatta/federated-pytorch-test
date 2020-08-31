@@ -138,8 +138,8 @@ for ck in range(K):
 # both should have K items
 #file_list=['/home/sarod/L785751.MS_extract.h5','/home/sarod/L785751.MS_extract.h5']
 #file_list=file_list+['/home/sarod/L785747.MS_extract.h5','/home/sarod/L785757.MS_extract.h5']
-file_list=['../../drive/My\ Drive/Colab\ Notebooks/L785751.MS_extract.h5','../../drive/My\ Drive/Colab\ Notebooks/L785751.MS_extract.h5']
-file_list=file_list+['../../drive/My\ Drive/Colab\ Notebooks/L785747.MS_extract.h5','../../drive/My\ Drive/Colab\ Notebooks/L785757.MS_extract.h5']
+file_list=['../../drive/My Drive/Colab Notebooks/L785751.MS_extract.h5','../../drive/My Drive/Colab Notebooks/L785751.MS_extract.h5']
+file_list=file_list+['../../drive/My Drive/Colab Notebooks/L785747.MS_extract.h5','../../drive/My Drive/Colab Notebooks/L785757.MS_extract.h5']
 sap_list=['1','2']
 sap_list=sap_list+['0','0']
 assert len(sap_list)==K and len(file_list)==K
