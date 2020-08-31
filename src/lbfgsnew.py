@@ -588,7 +588,7 @@ class LBFGSNew(Optimizer):
                    running_avg.add_(g_old,alpha=1.0/state['n_iter']) # newmean
                    g_new=flat_grad.clone()
                    g_new.add_(running_avg,alpha=-1.0) # grad-newmean
-                   running_avg_sq.addcmul_(1,g_new,g_old) # +(grad-newmean)(grad-oldmean)
+                   running_avg_sq.addcmul_(g_new,g_old,value=1) # +(grad-newmean)(grad-oldmean)
                    alphabar=1/(1+running_avg_sq.sum()/((state['n_iter']-1)*(grad_nrm)))
                    if be_verbose:
                      print('iter %d |mean| %f |var| %f ||grad|| %f step %f y^Ts %f alphabar=%f'%(state['n_iter'],running_avg.sum(),running_avg_sq.sum()/(state['n_iter']-1),grad_nrm,t,ys,alphabar))
