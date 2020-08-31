@@ -95,7 +95,6 @@ class LBFGSNew(Optimizer):
         for p in self._params:
             numel = p.numel()
             # view as to avoid deprecated pointwise semantics
-            #p.data.add_(step_size, update[offset:offset + numel].view_as(p.data))
             p.data.add_(update[offset:offset + numel].view_as(p.data), alpha=step_size)
             offset += numel
         assert offset == self._numel()
@@ -572,7 +571,7 @@ class LBFGSNew(Optimizer):
                 s = d.mul(t)
 
                 if batch_mode: # y = y+ lm0 * s, to have a trust region
-                  y.add_(lm0,s)
+                  y.add_(s,alpha=lm0)
 
                 ys = y.dot(s)  # y^T*s
                 sn = s.norm().item()  # ||s||
@@ -585,10 +584,10 @@ class LBFGSNew(Optimizer):
                    # variance = moment/(niter-1)
 
                    g_old=flat_grad.clone()
-                   g_old.add_(-1.0,running_avg) # grad-oldmean
-                   running_avg.add_(1.0/state['n_iter'],g_old) # newmean
+                   g_old.add_(running_avg,alpha=-1.0) # grad-oldmean
+                   running_avg.add_(g_old,alpha=1.0/state['n_iter']) # newmean
                    g_new=flat_grad.clone()
-                   g_new.add_(-1.0,running_avg) # grad-newmean
+                   g_new.add_(running_avg,alpha=-1.0) # grad-newmean
                    running_avg_sq.addcmul_(1,g_new,g_old) # +(grad-newmean)(grad-oldmean)
                    alphabar=1/(1+running_avg_sq.sum()/((state['n_iter']-1)*(grad_nrm)))
                    if be_verbose:
@@ -629,14 +628,14 @@ class LBFGSNew(Optimizer):
                 q = flat_grad.neg()
                 for i in range(num_old - 1, -1, -1):
                     al[i] = old_stps[i].dot(q) * ro[i]
-                    q.add_(-al[i], old_dirs[i])
+                    q.add_(old_dirs[i],alpha=-al[i])
 
                 # multiply by initial Hessian
                 # r/d is the final direction
                 d = r = torch.mul(q, H_diag)
                 for i in range(num_old):
                     be_i = old_dirs[i].dot(r) * ro[i]
-                    r.add_(al[i] - be_i, old_stps[i])
+                    r.add_(old_stps[i],alpha=al[i] - be_i)
 
             if prev_flat_grad is None:
                 prev_flat_grad = flat_grad.clone()
