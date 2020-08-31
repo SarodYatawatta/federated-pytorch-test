@@ -29,7 +29,7 @@ Lc=128
 Rc=32
 
 # minibatch size (==baselines selected)
-batch_size=4
+batch_size=16
 Nloop=2 # how many loops over the whole network
 Niter=10 # how many minibatches are considered for an epoch
 Nadmm=1 # how many Federated Averaging iterations
@@ -238,14 +238,14 @@ for nloop in range(Nloop):
      opt_dict={}
      for ck in range(K):
        if mdl==0:
-          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
-          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
        elif mdl==1:
-          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
-          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
        else:
-          opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
-          #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
 
      for nadmm in range(Nadmm):
         for ck in range(K):
