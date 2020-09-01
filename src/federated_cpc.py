@@ -24,13 +24,13 @@ K=4
 
 # model parameters
 # latent dimension
-Lc=128
+Lc=256
 # reduced latent dimension
 Rc=32
 
 # minibatch size (==baselines selected)
-batch_size=128
-Nloop=2 # how many loops over the whole network
+batch_size=32
+Nloop=1 # how many loops over the whole network
 Niter=10 # how many minibatches are considered for an epoch
 Nadmm=1 # how many Federated Averaging iterations
 
