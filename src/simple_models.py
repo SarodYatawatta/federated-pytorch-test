@@ -478,7 +478,7 @@ class EncoderCNN(nn.Module):
    # low,high: layers 2*low...2*high-1 are trained
    def train_order_block_ids(self):
       # divide to two blocks
-      return [[0,10],[10,16]]
+      return [[0,5],[5,8]]
 
 
 # pixelCNN  to create context from latents
