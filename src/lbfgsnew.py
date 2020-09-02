@@ -151,9 +151,9 @@ class LBFGSNew(Optimizer):
         self._add_grad(alphak, pk)
         f_new=float(closure())
 
-        # prod = c1 * alphak * gk^T pk
-        s=gk.mul(c1) 
-        prodterm=s.dot(pk)
+        # prod = c1 * ( alphak ) * gk^T pk = alphak * prodterm
+        s=gk
+        prodterm=c1*(s.dot(pk))
 
         ci=0
         if be_verbose:
@@ -167,6 +167,27 @@ class LBFGSNew(Optimizer):
            if be_verbose:
              print('LN %d alpha=%f fnew=%f fold=%f'%(ci,alphak,f_new,f_old))
            ci=ci+1
+
+        # if the cost is not sufficiently decreased, also try -ve steps
+        if (f_old-f_new < torch.abs(prodterm)):
+          alphak1=-alphabar
+          self._copy_params_in(xk)
+          self._add_grad(alphak1, pk)
+          f_new1=float(closure())
+          if be_verbose:
+            print('NLN fnew=%f'%f_new1)
+          while (ci<citer and (math.isnan(f_new1) or  f_new1 > f_old + alphak1*prodterm)):
+             alphak1=0.5*alphak1
+             self._copy_params_in(xk)
+             self._add_grad(alphak1, pk)
+             f_new1=float(closure())
+             if be_verbose:
+               print('NLN %d alpha=%f fnew=%f fold=%f'%(ci,alphak1,f_new1,f_old))
+             ci=ci+1
+
+          if f_new1<f_new:
+            # select -ve step
+            alphak=alphak1
 
         # recover original params
         self._copy_params_in(xk)
