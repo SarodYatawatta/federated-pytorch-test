@@ -29,7 +29,7 @@ Lc=256
 Rc=32
 
 # minibatch size (==baselines selected)
-batch_size=32
+batch_size=256
 Nloop=1 # how many loops over the whole network
 Niter=10 # how many minibatches are considered for an epoch
 Nadmm=1 # how many Federated Averaging iterations
