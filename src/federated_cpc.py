@@ -34,8 +34,8 @@ Nloop=1 # how many loops over the whole network
 Niter=10 # how many minibatches are considered for an epoch
 Nadmm=1 # how many Federated Averaging iterations
 
-load_model=False # enable this to load saved models
-init_model=True # enable this to initialize all K models to same (not when loading saved model)
+load_model=True # enable this to load saved models
+init_model=False # enable this to initialize all K models to same (not when loading saved model)
 save_model=True # save model
 be_verbose=True
 
