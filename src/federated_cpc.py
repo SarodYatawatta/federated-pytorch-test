@@ -239,13 +239,13 @@ for nloop in range(Nloop):
      for ck in range(K):
        if mdl==0:
           #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()),lr=0.0001)
-          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, encoder_dict[ck].parameters()), history_size=7, max_iter=2, line_search_fn=True,batch_mode=True)
        elif mdl==1:
           #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()),lr=0.0001)
-          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, contextgen_dict[ck].parameters()), history_size=7, max_iter=2, line_search_fn=True,batch_mode=True)
        else:
           #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()),lr=0.0001)
-          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=4, line_search_fn=True,batch_mode=True)
+          opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, predictor_dict[ck].parameters()), history_size=7, max_iter=2, line_search_fn=True,batch_mode=True)
 
      for nadmm in range(Nadmm):
         for ck in range(K):
