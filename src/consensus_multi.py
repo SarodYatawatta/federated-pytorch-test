@@ -307,9 +307,6 @@ for nloop in range(Nloop):
 
         print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,primal_residual,dual_residual))
 
-        for ck in range(K):
-          put_trainable_values(net_dict[ck],z)
-
         if check_results:
           verification_error_check(net_dict)
   
