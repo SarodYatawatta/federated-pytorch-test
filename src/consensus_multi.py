@@ -26,7 +26,7 @@ Nadmm=3 # how many ADMM iterations
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.001 # ADMM penalty, default value 
+admm_rho0=0.1 # ADMM penalty, default value 
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
@@ -38,7 +38,7 @@ check_results=True
 biased_input=True
 be_verbose=False
 
-bb_update=True # if true, use adaptive ADMM (Barzilai-Borwein) update
+bb_update=False # if true, use adaptive ADMM (Barzilai-Borwein) update
 if bb_update:
  #periodicity for the rho update, normally > 1
  bb_period_T=2
@@ -305,7 +305,7 @@ for nloop in range(Nloop):
           primal_residual=primal_residual+torch.norm(ydelta)
           y_dict[ck].add_(ydelta)
 
-        print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,primal_residual,dual_residual))
+        print('layer=%d(%d,%f) ADMM=%d/%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,nloop,primal_residual,dual_residual))
 
         if check_results:
           verification_error_check(net_dict)
