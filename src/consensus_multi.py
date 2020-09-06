@@ -198,7 +198,7 @@ for nloop in range(Nloop):
   
    opt_dict={}
    for ck in range(K):
-    opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=2, line_search_fn=True,batch_mode=True)
+    opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
     #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.001)
   
    ############# loop 1 (ADMM for subset of model)
