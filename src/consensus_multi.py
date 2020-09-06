@@ -21,12 +21,12 @@ torch.manual_seed(69)
 default_batch=128 # no. of batches per model is (50000/K)/default_batch
 Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
-Nadmm=3 # how many ADMM iterations
+Nadmm=6 # how many ADMM iterations
 
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.1 # ADMM penalty, default value 
+admm_rho0=0.01 # ADMM penalty, default value 
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
