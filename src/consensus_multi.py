@@ -21,11 +21,13 @@ torch.manual_seed(69)
 default_batch=128 # no. of batches per model is (50000/K)/default_batch
 Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
-Nadmm=3 # how many FA iterations
+Nadmm=3 # how many ADMM iterations
 
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
+admm_rho0=0.001 # ADMM penalty, default value 
+# note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
 init_model=True
@@ -35,6 +37,15 @@ check_results=True
 # (slightly) different normalization. Otherwise, same normalization
 biased_input=True
 be_verbose=False
+
+bb_update=True # if true, use adaptive ADMM (Barzilai-Borwein) update
+if bb_update:
+ #periodicity for the rho update, normally > 1
+ bb_period_T=2
+ bb_alphacorrmin=0.2 # minimum correlation required before an update is done
+ bb_epsilon=1e-3 # threshold to stop updating
+ bb_rhomax=0.1 # keep regularization below a safe upper limit
+
 
 # Set this to true for using ResNet instead of simpler models
 # In that case, instead of one layer, one block will be trained
@@ -145,6 +156,12 @@ if L != len(Li):
 else:
   print(Li)
 
+# regularization (per layer, per slave)
+# Note: need to scale rho down when starting from scratch  
+rho=torch.ones(L,3).to(mydevice)*admm_rho0
+# this will be updated when using adaptive ADMM (bb_update=True)
+
+
 from lbfgsnew import LBFGSNew # custom optimizer
 import torch.optim as optim
 ############### loop 00 (over the full net)
@@ -163,13 +180,28 @@ for nloop in range(Nloop):
    N=params_vec1.numel()
    z=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
    z.fill_(0.0)
+   y_dict={}
+   for ck in range(K):
+      y_dict[ck]=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+      y_dict[ck].fill_(0.0)
+
+   if bb_update: # extra storage for adaptive ADMM
+      yhat_dict={}
+      yhat0_dict={}
+      x0_dict={}
+      for ck in range(K):
+         yhat_dict[ck]=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+         yhat_dict[ck].fill_(0.0)
+         x0_dict[ck]=torch.empty(N,dtype=torch.float,requires_grad=False).to(mydevice)
+         yhat0_dict[ck]=get_trainable_values(net_dict[ck],mydevice)
+      
   
    opt_dict={}
    for ck in range(K):
-    opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+    opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=2, line_search_fn=True,batch_mode=True)
     #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.001)
   
-   ############# loop 1 (Federated avaraging for subset of model)
+   ############# loop 1 (ADMM for subset of model)
    for nadmm in range(Nadmm):
      ##### loop 2 (data) (all network updates are done per epoch, because K is large
      ##### and data per host is assumed to be small)
@@ -192,7 +224,9 @@ for nloop in range(Nloop):
                  if torch.is_grad_enabled():
                     opt_dict[ck].zero_grad()
                  outputs=net_dict[ck](inputs1)
-                 loss=criteria_dict[ck](outputs,labels1)
+                 # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
+                 augmented_terms=(torch.dot(y_dict[ck],params_vec1-z))+0.5*rho[ci,0]*(torch.norm(params_vec1-z,2)**2)
+                 loss=criteria_dict[ck](outputs,labels1)+augmented_terms
                  if ci in net_dict[ck].linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
                  if loss.requires_grad:
@@ -210,11 +244,50 @@ for nloop in range(Nloop):
             if be_verbose:
               print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
          
-
-        # Federated averaging
+        # ADMM step 2 update global z
         x_dict={}
         for ck in range(K):
           x_dict[ck]=get_trainable_values(net_dict[ck],mydevice)
+
+        # decide and update rho for this ADMM iteration (not the first iteration)
+        if bb_update:
+          if nadmm==0:
+            # store for next use
+            for ck in range(K):
+              x0_dict[ck]=x_dict[ck]
+          elif (nadmm%bb_period_T)==0:
+            for ck in range(K):
+              yhat_1=y_dict[ck]+rho[ci,0]*(x_dict[ck]-z)
+              deltay1=yhat_1-yhat0_dict[ck]
+              deltax1=x_dict[ck]-x0_dict[ck]
+              # inner products
+              d11=torch.dot(deltay1,deltay1)
+              d12=torch.dot(deltay1,deltax1) # note: can be negative
+              d22=torch.dot(deltax1,deltax1)
+
+              print('admm %d deltas=(%e,%e,%e)'%(nadmm,d11,d12,d22))
+              rhonew=rho[ci,0]
+              # catch situation where denominator is very small
+              if torch.abs(d12).item()>bb_epsilon and d11.item()>bb_epsilon and d22.item()>bb_epsilon:
+                 alpha=d12/torch.sqrt(d11*d22)
+                 alphaSD=d11/d22
+                 alphaMG=d12/d22
+
+                 if 2.0*alphaMG>alphaSD:
+                   alphahat=alphaMG
+                 else:
+                   alphahat=alphaSD-0.5*alphaMG
+                 if alpha>=bb_alphacorrmin and alphahat<bb_rhomax: # catches d12 being negative
+                   rhonew=alphahat
+                 print('admm %d alphas=(%e,%e,%e)'%(nadmm,alpha,alphaSD,alphaMG))
+
+              rho[ci,0]=rhonew
+              ###############
+
+              # carry forward current values for the next update
+              yhat0_dict[ck]=yhat_1
+              x0_dict[ck]=x_dict[ck]
+
 
         znew=torch.zeros(x_dict[0].shape).to(mydevice)
         for ck in range(K):
@@ -222,8 +295,18 @@ for nloop in range(Nloop):
         znew=znew/K
 
         dual_residual=torch.norm(z-znew).item()/N # per parameter
-        print('dual (epoch=%d,loop=%d,layer=%d,avg=%d)=%e'%(epoch,nloop,ci,nadmm,dual_residual))
         z=znew
+
+        # -> master will send z to all slaves
+        # ADMM step 3 update Lagrange multiplier 
+        primal_residual=0.0
+        for ck in range(K):
+          ydelta=rho[ci,0]*(x_dict[ck]-z)
+          primal_residual=primal_residual+torch.norm(ydelta)
+          y_dict[ck].add_(ydelta)
+
+        print('layer=%d(%d,%f) ADMM=%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,primal_residual,dual_residual))
+
         for ck in range(K):
           put_trainable_values(net_dict[ck],z)
 

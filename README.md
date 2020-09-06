@@ -12,15 +12,9 @@ Files included are:
 
 ``` no_consensus_trio.py ```: Train 3 models using 1/3 of the training data for each model
 
-``` federated_trio.py ```: Train 3 models using 1/3 of the data, but with federated averaging
-
 ``` federated_multi.py ```: Train K models using 1/K of the data, with federated averaging, K can be varied
 
-``` consensus_admm_trio.py ```: Train 3 models using 1/3 of the data, but with consensus optimization
-
-``` federated_trio_resnet.py ```: Train 3 ResNet18 models using 1/3 of the data, but with federated averaging
-
-``` consensus_admm_trio_resnet.py ```: Train 3 ResNet18 models using 1/3 of the data, but with consensus optimization
+``` consensus_multi.py ```: Train K models using 1/K of the data, with consensus optimization (adaptive) ADMM, K can be varied
 
 ``` federated_vae.py ```: Train K variational autoencoders, using federated averaging
 
