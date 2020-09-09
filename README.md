@@ -10,7 +10,7 @@ Files included are:
 
 ``` simple_models.py ```: Relatively simple CNN models for CIFAR10, derived from PyTorch/Tensorflow demos, also ResNet18
 
-``` no_consensus_trio.py ```: Train 3 models using 1/3 of the training data for each model
+``` no_consensus_multi.py ```: Train K models using 1/K of the training data for each model
 
 ``` federated_multi.py ```: Train K models using 1/K of the data, with federated averaging, K can be varied
 
