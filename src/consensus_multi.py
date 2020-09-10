@@ -26,7 +26,7 @@ Nadmm=6 # how many ADMM iterations
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.0001 # ADMM penalty, default value 
+admm_rho0=0.001 # ADMM penalty, default value 
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
@@ -304,6 +304,7 @@ for nloop in range(Nloop):
           ydelta=rho[ci,0]*(x_dict[ck]-z)
           primal_residual=primal_residual+torch.norm(ydelta)
           y_dict[ck].add_(ydelta)
+        primal_residual=primal_residual/N # per parameter
 
         print('layer=%d(%d,%f) ADMM=%d/%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,nloop,primal_residual,dual_residual))
 
