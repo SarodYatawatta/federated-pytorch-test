@@ -21,12 +21,12 @@ torch.manual_seed(69)
 default_batch=128 # no. of batches per model is (50000/K)/default_batch
 Nloop=12 # how many loops over the whole network
 Nepoch=1 # how many epochs?
-Nadmm=6 # how many ADMM iterations
+Nadmm=5 # how many ADMM iterations
 
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.001 # ADMM penalty, default value, use  <0.001 for Net()
+admm_rho0=0.01 # ADMM penalty, default value, use  <0.01 for Net()
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
@@ -292,8 +292,9 @@ for nloop in range(Nloop):
 
         znew=torch.zeros(x_dict[0].shape).to(mydevice)
         for ck in range(K):
-         znew=znew+x_dict[ck]
-        znew=znew/K
+         # sum (y+rho x)
+         znew=znew+y_dict[ck]+rho[ci,0]*x_dict[ck]
+        znew=znew/(K*rho[ci,0])
 
         dual_residual=torch.norm(z-znew).item()/N # per parameter
         z=znew
