@@ -26,7 +26,7 @@ Nadmm=6 # how many ADMM iterations
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.001 # ADMM penalty, default value 
+admm_rho0=0.01 # ADMM penalty, default value 
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
