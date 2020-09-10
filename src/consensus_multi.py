@@ -26,7 +26,7 @@ Nadmm=6 # how many ADMM iterations
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.01 # ADMM penalty, default value 
+admm_rho0=0.001 # ADMM penalty, default value, use  <0.001 for Net()
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
@@ -225,7 +225,8 @@ for nloop in range(Nloop):
                     opt_dict[ck].zero_grad()
                  outputs=net_dict[ck](inputs1)
                  # augmented lagrangian terms y^T (x-z) + rho/2 ||x-z||^2
-                 augmented_terms=(torch.dot(y_dict[ck],params_vec1-z))+0.5*rho[ci,0]*(torch.norm(params_vec1-z,2)**2)
+                 xdelta=params_vec1-z
+                 augmented_terms=(torch.dot(y_dict[ck],xdelta))+0.5*rho[ci,0]*(torch.norm(xdelta,2)**2)
                  loss=criteria_dict[ck](outputs,labels1)+augmented_terms
                  if ci in net_dict[ck].linear_layer_ids():
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
