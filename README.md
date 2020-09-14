@@ -25,4 +25,4 @@ Files included are:
 
 <img src="comparison.png" alt="test accuracy for training K=10 models" width="700"/>
 
-This images compares training K=10 models, stad alone ```no_consensus_multi.py```, with consensus optimization ```consensus_multi.py``` and with federated averaging ```federated_multi.py```.
+This images compares training K=1 and K=10 models, stad alone training using ```no_consensus_multi.py```, with consensus optimization ```consensus_multi.py``` and with federated averaging ```federated_multi.py```. The upper bound is using the full dataset for training ( K=1 ) while using 1/K of the data gives the lower bound.
