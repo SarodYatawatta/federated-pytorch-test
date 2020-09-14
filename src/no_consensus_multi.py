@@ -13,7 +13,7 @@ K=10
 torch.manual_seed(69)
 # minibatch size
 default_batch=128 # no. of batches per model is (50000/K)/default_batch
-Nepoch=12 # how many epochs?
+Nepoch=20 # how many epochs?
 
 load_model=False
 init_model=True
@@ -128,10 +128,11 @@ import torch.optim as optim
 for epoch in range(Nepoch):
    opt_dict={}
    for ck in range(K):
-    opt_dict[ck]=LBFGSNew(net_dict[ck].parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-    #opt_dict[ck]=optim.Adam(net_dict[ck].parameters(),lr=0.001)
+    #opt_dict[ck]=LBFGSNew(net_dict[ck].parameters(), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+    opt_dict[ck]=optim.Adam(net_dict[ck].parameters(),lr=0.001)
   
    #### loop 3 (models)
+   print('Epoch %d'%epoch)
    for ck in range(K):
           running_loss=0.0
   

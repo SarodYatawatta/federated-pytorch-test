@@ -21,3 +21,8 @@ Files included are:
 ``` federated_vae_cl.py ```: Train K variational autoencoders for clustering, using federated averaging, based on [this paper](https://arxiv.org/abs/2005.04613).
 
 ``` federated_cpc.py ```: Train K models using contrastive predictive coding, using LOFAR data, based on [this paper](https://arxiv.org/abs/1905.09272).
+
+
+<img src="comparison.png" alt="test accuracy for training K=10 models" width="700"/>
+
+This images compares training K=10 models, stad alone ```no_consensus_multi.py```, with consensus optimization ```consensus_multi.py``` and with federated averaging ```federated_multi.py```.

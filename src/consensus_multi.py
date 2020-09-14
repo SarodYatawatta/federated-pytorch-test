@@ -26,7 +26,7 @@ Nadmm=5 # how many ADMM iterations
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=0.01 # ADMM penalty, default value, use  <0.01 for Net()
+admm_rho0=0.1 # ADMM penalty, default value
 # note that per each slave, and per each layer, there will be a unique rho value
 
 load_model=False
@@ -198,8 +198,8 @@ for nloop in range(Nloop):
   
    opt_dict={}
    for ck in range(K):
-    opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
-    #opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.001)
+    #opt_dict[ck]=LBFGSNew(filter(lambda p: p.requires_grad, net_dict[ck].parameters()), history_size=10, max_iter=4, line_search_fn=True,batch_mode=True)
+    opt_dict[ck]=optim.Adam(filter(lambda p: p.requires_grad, net_dict[ck].parameters()),lr=0.001)
   
    ############# loop 1 (ADMM for subset of model)
    for nadmm in range(Nadmm):
