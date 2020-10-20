@@ -26,7 +26,7 @@ Nadmm=5 # how many FedProx iterations
 # regularization
 lambda1=0.0001 # L1 sweet spot 0.00031
 lambda2=0.0001 # L2 sweet spot ?
-admm_rho0=10.0 # proximal penalty 'mu', default value
+admm_rho0=1.0 # proximal penalty 'mu', default value
 
 load_model=False
 init_model=True
