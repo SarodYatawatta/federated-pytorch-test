@@ -187,8 +187,9 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10):
+    def __init__(self, block, num_blocks, qualifier, num_classes=10):
         super(ResNet, self).__init__()
+        self.qualifier=qualifier # 9 or 18
         self.in_planes = 64
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
@@ -223,22 +224,28 @@ class ResNet(nn.Module):
     # all parameters belong to partition k
     # NOTE: this should be specified by hand
     def upidx(self):
-      return [2,8,14,23,29,38,44,53,59,61]
-
+      if self.qualifier==18:
+       return [[0,2],[3,8],[9,14],[15,23],[24,29],[30,38],[39,44],[45,53],[54,59],[60,61]]
+      else:
+       return [[0,2],[3,8],[9,14],[15,17],[18,23],[24,29],[30,32],[33,37]]
 
     # return linear layer ids (empty)
     def linear_layer_ids(self):
       return []
  
-    # return layer ids (in 0...9) ordered for training FIX this
+    # return block ids (in 0...max_block) ordered for training 
     def train_order_layer_ids(self):
-      return [0,1,2,3,4,5,6,7,8,9]
-
+      if self.qualifier==18:
+       return [0,1,2,3,4,5,6,7,8,9]
+      else:
+       return [0,1,2,3,4,5,6,7]
 
 
 def ResNet18():
-    return ResNet(BasicBlock, [2,2,2,2])
+    return ResNet(BasicBlock, [2,2,2,2], qualifier=18)
 
+def ResNet9():
+    return ResNet(BasicBlock, [1,1,1,1], qualifier=9)
 
 ####################### End of ResNet related  classes
 
