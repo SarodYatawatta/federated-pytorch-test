@@ -14,6 +14,8 @@ Files included are:
 
 ``` federated_multi.py ```: Train K models using 1/K of the data, with federated averaging, K can be varied
 
+``` fedprox_multi.py ```: Train K models using 1/K of the data, with federated proximal algorithm, K can be varied
+
 ``` consensus_multi.py ```: Train K models using 1/K of the data, with consensus optimization (adaptive) ADMM, K can be varied
 
 ``` federated_vae.py ```: Train K variational autoencoders, using federated averaging
