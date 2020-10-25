@@ -115,22 +115,16 @@ if init_model:
    torch.manual_seed(0)
    net_dict[ck].apply(init_weights)
 
-L=number_of_layers(net_dict[0])
-
 # get layer ids in given order 0..L-1 for selective training
 np.random.seed(0)# get same list
-Li=net_dict[0].train_order_layer_ids()
-# make sure number of layers match
-if L != len(Li):
-  print("Warning, expected number of layers and given layer ids do not agree")
-else:
-  print(Li)
+Li=net_dict[0].train_order_block_ids()
+L=len(Li)
 
 import torch.optim as optim
 ############### loop 00 (over the full net)
 for nloop in range(Nloop):
   ############ loop 0 (over layers of the network)
-  for ci in Li:
+  for ci in range(L):
    for ck in range(K):
      unfreeze_one_layer(net_dict[ck],ci)
    trainable=filter(lambda p: p.requires_grad, net_dict[0].parameters())

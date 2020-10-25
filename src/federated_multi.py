@@ -131,31 +131,20 @@ criteria_dict={}
 for ck in range(K):
  criteria_dict[ck]=nn.CrossEntropyLoss()
 
-if not use_resnet:
- L=number_of_layers(net_dict[0])
-else:
- L=number_of_blocks(net_dict[0])
 
 # get layer ids in given order 0..L-1 for selective training
 np.random.seed(0)# get same list
-Li=net_dict[0].train_order_layer_ids()
-# make sure number of layers match
-if L != len(Li):
-  print("Warning, expected number of layers and given layer ids do not agree")
-else:
-  print(Li)
+Li=net_dict[0].train_order_block_ids()
+L=len(Li)
 
 from lbfgsnew import LBFGSNew # custom optimizer
 import torch.optim as optim
 ############### loop 00 (over the full net)
 for nloop in range(Nloop):
   ############ loop 0 (over layers of the network)
-  for ci in Li:
+  for ci in range(0,L):
    for ck in range(K):
-     if not use_resnet:
-       unfreeze_one_layer(net_dict[ck],ci)
-     else:
-       unfreeze_one_block(net_dict[ck],ci)
+     unfreeze_one_block(net_dict[ck],ci)
    trainable=filter(lambda p: p.requires_grad, net_dict[0].parameters())
    params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
   
@@ -185,15 +174,15 @@ for nloop in range(Nloop):
             # wrap them in variable
             inputs1,labels1=Variable(inputs1).to(mydevice),Variable(labels1).to(mydevice)
     
-            trainable=filter(lambda p: p.requires_grad, net_dict[ck].parameters())
-            params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
-  
+ 
             def closure1():
                  if torch.is_grad_enabled():
                     opt_dict[ck].zero_grad()
                  outputs=net_dict[ck](inputs1)
                  loss=criteria_dict[ck](outputs,labels1)
                  if ci in net_dict[ck].linear_layer_ids():
+                    trainable=filter(lambda p: p.requires_grad, net_dict[ck].parameters())
+                    params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
                     loss+=lambda1*torch.norm(params_vec1,1)+lambda2*(torch.norm(params_vec1,2)**2)
                  if loss.requires_grad:
                     loss.backward()

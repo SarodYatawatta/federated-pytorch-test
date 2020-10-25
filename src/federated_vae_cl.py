@@ -169,28 +169,20 @@ if init_model:
    torch.manual_seed(0)
    net_dict[ck].apply(init_weights)
 
-L=number_of_layers(net_dict[0])
-
 # get layer ids in given order 0..L-1 for selective training
 np.random.seed(0)# get same list
-Li=net_dict[0].train_order_layer_ids()
-# make sure number of layers match
-if L != len(Li):
-  print("Warning, expected number of layers and given layer ids do not agree")
-else:
-  print(Li)
+Li=net_dict[0].train_order_block_ids()
+L=len(Li)
 
-Bi=net_dict[0].train_order_block_ids()
-print(Bi)
 
 import torch.optim as optim
 from lbfgsnew import LBFGSNew # custom optimizer
 ############### loop 00 (over the full net)
 for nloop in range(Nloop):
   ############ loop 0 (over layers of the network)
-  for ci in range(len(Bi)):
+  for ci in range(L):
    for ck in range(K):
-     unfreeze_one_block(net_dict[ck],Bi[ci])
+     unfreeze_one_block(net_dict[ck],ci)
      if ci==2: # latent space
       net_dict[ck].enable_repr()
      else:
@@ -227,14 +219,14 @@ for nloop in range(Nloop):
             # get the inputs
             x=Variable(images).to(mydevice)
 
-            trainable=filter(lambda p: p.requires_grad, net_dict[ck].parameters())
-            params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
 
             def closure1():
                ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th=net_dict[ck](x)
                if torch.is_grad_enabled():
                  opt_dict[ck].zero_grad()
                loss=loss_function(ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,x)
+               trainable=filter(lambda p: p.requires_grad, net_dict[ck].parameters())
+               params_vec1=torch.cat([x.view(-1) for x in list(trainable)])
                loss+=lambda2*torch.norm(params_vec1,2)**2
                if loss.requires_grad:
                  loss.backward()
@@ -256,7 +248,7 @@ for nloop in range(Nloop):
               print("cluster %d costs %f,%f,%f,%f"%(k,c1.data.item(),c2.data.item(),c21.data.item(),c3.data.item()))
 
             print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
-            del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th,trainable,params_vec1
+            del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th
          
 
         # Federated averaging

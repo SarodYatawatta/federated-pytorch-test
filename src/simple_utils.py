@@ -35,7 +35,7 @@ def unfreeze_one_block(net,blockid):
   ''' layers=[llow,lhigh] in the given blockid
     make all layers in llow..lhigh trainable
   '''
-  blocks=net.upidx()[blockid]
+  blocks=net.train_order_block_ids()[blockid]
   llow=blocks[0]
   lhigh=blocks[1]
   for ci,param in enumerate(net.parameters(),0):
@@ -77,12 +77,12 @@ def put_trainable_values(net,X):
     offset+=numel
 
 def number_of_layers(net):
-  ' get total number of layers (note: each layers has weight and bias , so count as 2) '
+  ' get total number of layers (note: some layers have weight and bias) '
   for ci,param in enumerate(net.parameters(),0):
    pass
-  return int((ci+1)/2) # because weight+bias belong to one layer
+  return int(ci+1) # do not divide by 2
 
 def number_of_blocks(net):
-  ' get total number of blocks of layers (for ResNet) '
-  return len(net.upidx())
+  ' get total number of blocks of layers '
+  return len(net.train_order_block_ids())
 

@@ -25,20 +25,18 @@ class Net(nn.Module):
     x=self.fc3(x)
     return x
 
-  # return linear layer ids (in 0...4)
+  # return linear layer ids (in 0...9)
   def linear_layer_ids(self):
-    return [2,3,4]
+    return [4,6,8]
   
   # return linear layer parameters (for regularization)
   def linear_layer_parameters(self):
     linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters() or self.fc3.parameters())])
     return linear1
 
-  # return layer ids (in 0...4) ordered for training
-  def train_order_layer_ids(self):
-    return [2,0,1,3,4]
 
-  
+  def train_order_block_ids(self):
+    return [[4,5],[0,1],[2,3],[6,7],[8,9]]
 
 
 class Net1(nn.Module):
@@ -65,18 +63,18 @@ class Net1(nn.Module):
     x=self.fc2(x)
     return x
 
-  # return linear layer ids (in 0...5)
+  # return linear layer ids (in 0...11)
   def linear_layer_ids(self):
-    return [4,5]
+    return [8,10]
 
   # return linear layer parameters (for regularization)
   def linear_layer_parameters(self):
     linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters())])
     return linear1
 
-  # return layer ids (in 0...5) ordered for training
-  def train_order_layer_ids(self):
-    return [2,5,1,3,0,4]
+  # return layer ids (in 0...11) ordered for training
+  def train_order_block_ids(self):
+    return [[4,5],[10,11],[2,3],[6,7],[0,1],[8,9]]
 
 
 
@@ -115,21 +113,19 @@ class Net2(nn.Module):
     x=self.fc5(x)
     return x
 
-  # return linear layer ids (in 0...8)
+  # return linear layer ids (in 0...17)
   def linear_layer_ids(self):
-    return [4,5,6,7,8]
-
+    return [12,14,16]
+ 
   # return linear layer parameters (for regularization)
   def linear_layer_parameters(self):
     linear1=torch.cat([x.view(-1) for x in (self.fc1.parameters() or self.fc2.parameters() or self.fc3.parameters() or self.fc4.parameters() or self.fc5.parameters())])
     return linear1
 
 
-
-  # return layer ids (in 0...8) ordered for training
-  def train_order_layer_ids(self):
-    return [7, 2, 1, 4, 8, 6, 3, 0, 5]
-
+  # return layer ids (in 0...17) ordered for training
+  def train_order_block_ids(self):
+    return [[14,15], [4,5], [2,3], [8,9], [16,17], [12,13], [6,7], [0,1], [10,11]]
 
 
 ####################### ResNet related  classes
@@ -223,7 +219,7 @@ class ResNet(nn.Module):
     # if ci<= upperindex[k] and ci>upperindex[k-1], 
     # all parameters belong to partition k
     # NOTE: this should be specified by hand
-    def upidx(self):
+    def train_order_block_ids(self):
       if self.qualifier==18:
        return [[0,2],[3,8],[9,14],[15,23],[24,29],[30,38],[39,44],[45,53],[54,59],[60,61]]
       else:
@@ -233,13 +229,6 @@ class ResNet(nn.Module):
     def linear_layer_ids(self):
       return []
  
-    # return block ids (in 0...max_block) ordered for training 
-    def train_order_layer_ids(self):
-      if self.qualifier==18:
-       return [0,1,2,3,4,5,6,7,8,9]
-      else:
-       return [0,1,2,3,4,5,6,7]
-
 
 def ResNet18():
     return ResNet(BasicBlock, [2,2,2,2], qualifier=18)
@@ -311,9 +300,10 @@ class AutoEncoderCNN(nn.Module):
 
         return eps.mul(std).add_(mu)
 
-    # return layer ids (in 0...11) ordered for training
-    def train_order_layer_ids(self):
-      return [0,1,2,3,4,7,8,9,10,11,5,6] 
+    # return layer ids (in 0...23) ordered for training
+    def train_order_block_ids(self):
+      return [[0,1],[2,3],[4,5],[6,7],[8,9],[14,15],[16,17],[18,19],[20,21],[22,23],[10,11],[12,13]] 
+
 ########################################################
 
 class AutoEncoderCNNCL(nn.Module):
@@ -436,14 +426,10 @@ class AutoEncoderCNNCL(nn.Module):
 
         return eps.mul(std).add_(mu)
 
-    # return layer ids (in 0...20) ordered for training
-    def train_order_layer_ids(self):
-      return [ii for ii in range(0,21)]
-
-    # low,high: layers 2*low...2*high-1 are trained
+    # low,high: layers low...high are trained
     def train_order_block_ids(self):
       # encoder, decoder, latent space
-      return [[0,4],[16,21],[4,16]]
+      return [[0,7],[32,41],[8,31]]
 
 ########################################################
 # Encoder, Context generator and Predictor for CPC
@@ -478,14 +464,10 @@ class EncoderCNN(nn.Module):
      x= F.avg_pool2d(x,2).squeeze()
      return x
 
-   # return layer ids (in 0...15) ordered for training
-   def train_order_layer_ids(self):
-      return [ii for ii in range(0,16)]
-
-   # low,high: layers 2*low...2*high-1 are trained
+   # low,high: layers low...high are trained
    def train_order_block_ids(self):
       # divide to two blocks
-      return [[0,5],[5,8]]
+      return [[0,9],[10,15]]
 
 
 # pixelCNN  to create context from latents
@@ -505,14 +487,11 @@ class ContextgenCNN(nn.Module):
     x=F.elu(self.conv4(x))
     return x
 
-  # return layer ids (in 0...3) ordered for training
-  def train_order_layer_ids(self):
-      return [ii for ii in range(0,4)]
 
-  # low,high: layers 2*low...2*high-1 are trained
+  # low,high: layers low...high are trained
   def train_order_block_ids(self):
       # full net
-      return [[0,2]]
+      return [[0,3]]
 
 
 # prediction network
@@ -529,11 +508,7 @@ class PredictorCNN(nn.Module):
     prediction=self.conv2(context)
     return reduced_latents,prediction
 
-  # return layer ids (in 0...1) ordered for training
-  def train_order_layer_ids(self):
-      return [ii for ii in range(0,2)]
-
-  # low,high: layers 2*low...2*high-1 are trained
+  # low,high: layers low...high are trained
   def train_order_block_ids(self):
       # full net
       return [[0,1]]
