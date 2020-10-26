@@ -197,7 +197,7 @@ for nloop in range(Nloop):
             running_loss +=loss1
            
             if be_verbose:
-              print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
+              print('model=%d block=[%d,%d] %d(%d) minibatch=%d epoch=%d loss %e'%(ck,Li[ci][0],Li[ci][1],nloop,N,i,epoch,loss1))
          
 
         # Federated averaging
@@ -211,7 +211,7 @@ for nloop in range(Nloop):
         znew=znew/K
 
         dual_residual=torch.norm(z-znew).item()/N # per parameter
-        print('dual (epoch=%d,loop=%d,layer=%d,avg=%d)=%e'%(epoch,nloop,ci,nadmm,dual_residual))
+        print('dual (epoch=%d,loop=%d,block=[%d,%d],avg=%d)=%e'%(epoch,nloop,Li[ci][0],Li[ci][1],nadmm,dual_residual))
         z=znew
         for ck in range(K):
           put_trainable_values(net_dict[ck],z)

@@ -231,7 +231,7 @@ for nloop in range(Nloop):
             running_loss +=loss1
            
             if be_verbose:
-              print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
+              print('model=%d block=[%d,%d] %d(%d) minibatch=%d epoch=%d loss %e'%(ck,Li[ci][0],Li[ci][1],nloop,N,i,epoch,loss1))
          
         # ADMM step 2 update global z
         x_dict={}
@@ -296,7 +296,7 @@ for nloop in range(Nloop):
           y_dict[ck].add_(ydelta)
         primal_residual=primal_residual/N # per parameter
 
-        print('layer=%d(%d,%f) ADMM=%d/%d primal=%e dual=%e'%(ci,N,torch.mean(rho).item(),nadmm,nloop,primal_residual,dual_residual))
+        print('block=[%d,%d](%d,%f) ADMM=%d/%d primal=%e dual=%e'%(Li[ci][0],Li[ci][1],N,torch.mean(rho).item(),nadmm,nloop,primal_residual,dual_residual))
 
         if check_results:
           verification_error_check(net_dict)

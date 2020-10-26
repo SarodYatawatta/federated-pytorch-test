@@ -247,7 +247,7 @@ for nloop in range(Nloop):
               c3=cost3(ekhat[:,k],mu_xi[k],sig2_xi[k],mu_b[k],sig2_b[k])
               print("cluster %d costs %f,%f,%f,%f"%(k,c1.data.item(),c2.data.item(),c21.data.item(),c3.data.item()))
 
-            print('model=%d layer=%d %d(%d) minibatch=%d epoch=%d loss %e'%(ck,ci,nloop,N,i,epoch,loss1))
+            print('model=%d block=[%d,%d] %d(%d) minibatch=%d epoch=%d loss %e'%(ck,Li[ci][0],Li[ci][1],nloop,N,i,epoch,loss1))
             del x,loss1,ekhat,mu_xi,sig2_xi,mu_b,sig2_b,mu_th,sig2_th
          
 
@@ -262,7 +262,7 @@ for nloop in range(Nloop):
         znew=znew/K
 
         dual_residual=torch.norm(z-znew).item()/N # per parameter
-        print('dual (epoch=%d,loop=%d,layer=%d,avg=%d)=%e'%(epoch,nloop,ci,nadmm,dual_residual))
+        print('dual (epoch=%d,loop=%d,block=[%d,%d],avg=%d)=%e'%(epoch,nloop,Li[ci][0],Li[ci][1],nadmm,dual_residual))
         z=znew
         for ck in range(K):
           put_trainable_values(net_dict[ck],z)
