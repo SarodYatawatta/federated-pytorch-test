@@ -103,7 +103,7 @@ def get_data_minibatch(filename,batch_size=2,patch_size=32,SAP='0'):
 
   # do some rough cleanup of data
   ##y[y!=y]=0 # set NaN,Inf to zero
-  torch.clamp(y,-1e6,1e6) # clip high values
+  y.clamp_(-1e6,1e6) # clip high values
   
   return patchx,patchy,y
 
